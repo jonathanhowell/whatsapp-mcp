@@ -3,6 +3,9 @@ import { loadConfig } from "./config/loader.js";
 import { openDatabase, type DatabaseHandle } from "./db/connection.js";
 import { createServer } from "./server.js";
 import { registerRefreshSnapshotTool } from "./tools/refresh-snapshot.js";
+import { registerListChatsTool } from "./tools/list-chats.js";
+import { registerGetMessagesTool } from "./tools/get-messages.js";
+import { registerGetMessagesSinceTool } from "./tools/get-messages-since.js";
 import type { Config } from "./config/loader.js";
 
 async function main(): Promise<void> {
@@ -20,6 +23,9 @@ async function main(): Promise<void> {
   };
 
   registerRefreshSnapshotTool(server, getState, setState);
+  registerListChatsTool(server, getState);
+  registerGetMessagesTool(server, getState);
+  registerGetMessagesSinceTool(server, getState);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
