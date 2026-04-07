@@ -15,14 +15,14 @@ Claude can read WhatsApp messages to extract actionable tasks and answer questio
 - [x] Support reading from live WhatsApp SQLite database (native macOS app) — Validated in Phase 1: Foundation
 - [x] Support reading from a snapshot copy of the database — Validated in Phase 1: Foundation
 - [x] Configurable database path (live DB or snapshot location) — Validated in Phase 1: Foundation
+- [x] List all chats with contact/group names — Validated in Phase 2: Core Tools
+- [x] Fetch messages from a specific chat with date and limit filters — Validated in Phase 2: Core Tools
+- [x] Fetch messages since a given timestamp (polling for new messages) — Validated in Phase 2: Core Tools
+- [x] Return media metadata (type, filename) alongside message text — Validated in Phase 2: Core Tools
 
 ### Active
 
-- [ ] List all chats with contact/group names
-- [ ] Fetch messages from a specific chat with date and limit filters
 - [ ] Full-text search across all chats by keyword
-- [ ] Fetch messages since a given timestamp (polling for new messages)
-- [ ] Return media metadata (type, filename) alongside message text
 - [ ] Separate tool to retrieve/serve media files (images, voice notes, documents)
 
 ### Out of Scope
@@ -75,4 +75,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after Phase 1 completion — MCP server running, database access verified*
+*Last updated: 2026-04-07 after Phase 2 completion — core polling tools (list_chats, get_messages, get_messages_since) operational*
