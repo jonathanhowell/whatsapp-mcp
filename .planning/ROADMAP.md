@@ -12,7 +12,7 @@ Three phases build from the ground up: first, a working TypeScript project with 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - TypeScript project, database access, MCP server skeleton, and safety infrastructure
+- [x] **Phase 1: Foundation** - TypeScript project, database access, MCP server skeleton, and safety infrastructure (completed 2026-04-07)
 - [ ] **Phase 2: Core Tools** - `list_chats`, `get_messages`, and `get_messages_since` tools (primary polling workflow)
 - [ ] **Phase 3: Extended Tools** - `search_messages`, `get_contact`, `get_chat`, and `get_media_file` tools
 
@@ -28,12 +28,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. On startup, the server validates that expected tables exist and emits a clear human-readable error if the database path is inaccessible or the schema is unexpected
   4. All timestamps returned from the database are converted from Apple Core Data epoch (seconds since 2001-01-01) to ISO 8601
   5. Database path is configurable via environment variable; the server falls back to the known macOS default path
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 01-01-PLAN.md — Project scaffolding, config loader (TOML + env vars), timestamp utility
 - [x] 01-02-PLAN.md — Database access layer: snapshot lifecycle, schema validation, connection factory
-- [ ] 01-03-PLAN.md — MCP server entry point, refresh_snapshot tool, build, Claude Desktop verification
+- [x] 01-03-PLAN.md — MCP server entry point, refresh_snapshot tool, build, Claude Desktop verification
 
 ### Phase 2: Core Tools
 **Goal**: Claude can list all WhatsApp chats and read messages from any chat — including polling for messages since a given timestamp — covering the primary personal assistant use case
@@ -64,6 +64,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 2/3 | In Progress|  |
+| 1. Foundation | 3/3 | Complete   | 2026-04-07 |
 | 2. Core Tools | 0/? | Not started | - |
 | 3. Extended Tools | 0/? | Not started | - |

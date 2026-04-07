@@ -29,9 +29,9 @@
 
 ### MCP Server
 
-- [ ] **MCP-01**: Server runs over stdio transport using `@modelcontextprotocol/sdk`
-- [ ] **MCP-02**: All tools annotated with `readOnlyHint: true` for auto-approval
-- [ ] **MCP-03**: No writes to stdout except MCP JSON-RPC protocol messages
+- [x] **MCP-01**: Server runs over stdio transport using `@modelcontextprotocol/sdk`
+- [x] **MCP-02**: All tools annotated with `readOnlyHint: true` for auto-approval
+- [x] **MCP-03**: No writes to stdout except MCP JSON-RPC protocol messages
 
 ## v2 Requirements
 
@@ -70,9 +70,9 @@
 | INFRA-04 | Phase 1 | Complete |
 | INFRA-05 | Phase 1 | Complete |
 | INFRA-06 | Phase 1 | Complete |
-| MCP-01 | Phase 1 | Pending |
-| MCP-02 | Phase 1 | Pending |
-| MCP-03 | Phase 1 | Pending |
+| MCP-01 | Phase 1 | Complete |
+| MCP-02 | Phase 1 | Complete |
+| MCP-03 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total
