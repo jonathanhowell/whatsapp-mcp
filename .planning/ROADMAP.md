@@ -43,10 +43,10 @@ Plans:
   1. Claude can call `list_chats` and receive all chats with contact/group name, last message preview, unread count, and chat ID
   2. Claude can call `get_messages` with a chat ID and receive messages filtered by optional date range and limit, with media metadata (type, filename) included alongside message text
   3. Claude can call `get_messages_since` with a timestamp and receive all new messages across every chat since that time, enabling a polling workflow
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 02-01-PLAN.md — Shared utilities (isoToAppleEpoch, message type map) and list_chats tool
+- [x] 02-01-PLAN.md — Shared utilities (isoToAppleEpoch, message type map) and list_chats tool
 - [ ] 02-02-PLAN.md — get_messages and get_messages_since tools, wire all tools into server
 
 ### Phase 3: Extended Tools
@@ -69,5 +69,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete   | 2026-04-07 |
-| 2. Core Tools | 0/2 | Planned | - |
+| 2. Core Tools | 1/2 | In Progress|  |
 | 3. Extended Tools | 0/? | Not started | - |
