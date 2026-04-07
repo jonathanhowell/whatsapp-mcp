@@ -12,7 +12,9 @@ Claude can read WhatsApp messages to extract actionable tasks and answer questio
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Support reading from live WhatsApp SQLite database (native macOS app) — Validated in Phase 1: Foundation
+- [x] Support reading from a snapshot copy of the database — Validated in Phase 1: Foundation
+- [x] Configurable database path (live DB or snapshot location) — Validated in Phase 1: Foundation
 
 ### Active
 
@@ -22,9 +24,6 @@ Claude can read WhatsApp messages to extract actionable tasks and answer questio
 - [ ] Fetch messages since a given timestamp (polling for new messages)
 - [ ] Return media metadata (type, filename) alongside message text
 - [ ] Separate tool to retrieve/serve media files (images, voice notes, documents)
-- [ ] Support reading from live WhatsApp SQLite database (native macOS app)
-- [ ] Support reading from a snapshot copy of the database
-- [ ] Configurable database path (live DB or snapshot location)
 
 ### Out of Scope
 
@@ -53,9 +52,9 @@ Claude can read WhatsApp messages to extract actionable tasks and answer questio
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| TypeScript + official MCP SDK | Best ecosystem support for MCP servers | — Pending |
-| Read-only access | Safety — never risk corrupting WhatsApp data | — Pending |
-| Snapshot + live DB support | Live DB may be locked; snapshots are safer for concurrent access | — Pending |
+| TypeScript + official MCP SDK | Best ecosystem support for MCP servers | Validated Phase 1 |
+| Read-only access | Safety — never risk corrupting WhatsApp data | Validated Phase 1 |
+| Snapshot + live DB support | Live DB may be locked; snapshots are safer for concurrent access | Validated Phase 1 |
 | Separate media tool | Keep message listing lightweight; fetch media on demand | — Pending |
 
 ## Evolution
@@ -76,4 +75,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after initialization*
+*Last updated: 2026-04-07 after Phase 1 completion — MCP server running, database access verified*
