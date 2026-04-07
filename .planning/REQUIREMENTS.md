@@ -20,11 +20,11 @@
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Server auto-discovers WhatsApp SQLite database path at startup and validates expected tables exist
-- [ ] **INFRA-02**: Snapshot mode copies database files atomically before reading (default mode)
-- [ ] **INFRA-03**: Live DB mode reads directly from WhatsApp database (opt-in alternative)
+- [x] **INFRA-01**: Server auto-discovers WhatsApp SQLite database path at startup and validates expected tables exist
+- [x] **INFRA-02**: Snapshot mode copies database files atomically before reading (default mode)
+- [x] **INFRA-03**: Live DB mode reads directly from WhatsApp database (opt-in alternative)
 - [x] **INFRA-04**: All Apple Core Data epoch timestamps converted to ISO 8601 in tool responses
-- [ ] **INFRA-05**: Startup permission checks with clear human-readable errors for macOS TCC/access failures
+- [x] **INFRA-05**: Startup permission checks with clear human-readable errors for macOS TCC/access failures
 - [x] **INFRA-06**: Database path configurable via environment variable or server config
 
 ### MCP Server
@@ -64,11 +64,11 @@
 | TOOL-05 | Phase 3 | Pending |
 | TOOL-06 | Phase 3 | Pending |
 | TOOL-07 | Phase 3 | Pending |
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
-| INFRA-03 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Complete |
+| INFRA-02 | Phase 1 | Complete |
+| INFRA-03 | Phase 1 | Complete |
 | INFRA-04 | Phase 1 | Complete |
-| INFRA-05 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Complete |
 | INFRA-06 | Phase 1 | Complete |
 | MCP-01 | Phase 1 | Pending |
 | MCP-02 | Phase 1 | Pending |
