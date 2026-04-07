@@ -1,0 +1,84 @@
+# Requirements: WhatsApp MCP Server
+
+**Defined:** 2026-04-07
+**Core Value:** Claude can read WhatsApp messages to extract actionable tasks and answer questions about conversations
+
+## v1 Requirements
+
+### Core Tools
+
+- [ ] **TOOL-01**: `list_chats` returns all chats with contact/group name, last message preview, unread count, and chat ID
+- [ ] **TOOL-02**: `get_messages` returns messages from a specific chat with optional date range and limit filters
+- [ ] **TOOL-03**: `get_messages_since` returns messages across all chats since a given timestamp (for polling)
+- [ ] **TOOL-04**: `search_messages` performs full-text search across all chats using FTS5 index with LIKE fallback
+
+### Extended Tools
+
+- [ ] **TOOL-05**: `get_contact` looks up contact details (name, phone number) by name or phone
+- [ ] **TOOL-06**: `get_chat` returns detailed chat info including group members for group chats
+- [ ] **TOOL-07**: `get_media_file` retrieves a media file (image, voice note, document) by message ID
+
+### Infrastructure
+
+- [ ] **INFRA-01**: Server auto-discovers WhatsApp SQLite database path at startup and validates expected tables exist
+- [ ] **INFRA-02**: Snapshot mode copies database files atomically before reading (default mode)
+- [ ] **INFRA-03**: Live DB mode reads directly from WhatsApp database (opt-in alternative)
+- [ ] **INFRA-04**: All Apple Core Data epoch timestamps converted to ISO 8601 in tool responses
+- [ ] **INFRA-05**: Startup permission checks with clear human-readable errors for macOS TCC/access failures
+- [ ] **INFRA-06**: Database path configurable via environment variable or server config
+
+### MCP Server
+
+- [ ] **MCP-01**: Server runs over stdio transport using `@modelcontextprotocol/sdk`
+- [ ] **MCP-02**: All tools annotated with `readOnlyHint: true` for auto-approval
+- [ ] **MCP-03**: No writes to stdout except MCP JSON-RPC protocol messages
+
+## v2 Requirements
+
+### Enhancements
+
+- **ENH-01**: Message type indicators (image, video, voice note, document, poll, reaction) in message responses
+- **ENH-02**: Pagination support for large chat histories
+- **ENH-03**: Chat filtering by type (individual, group, broadcast)
+- **ENH-04**: Message thread/reply chain resolution
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Sending/writing messages | Read-only access only — safety constraint |
+| WhatsApp Web/Electron app support | Native macOS app only |
+| Real-time push notifications | Polling-based design, not event-driven |
+| Multi-account support | Single WhatsApp account |
+| Message decryption | Relies on desktop app's already-decrypted local DB |
+| Windows/Linux support | macOS only |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| TOOL-01 | — | Pending |
+| TOOL-02 | — | Pending |
+| TOOL-03 | — | Pending |
+| TOOL-04 | — | Pending |
+| TOOL-05 | — | Pending |
+| TOOL-06 | — | Pending |
+| TOOL-07 | — | Pending |
+| INFRA-01 | — | Pending |
+| INFRA-02 | — | Pending |
+| INFRA-03 | — | Pending |
+| INFRA-04 | — | Pending |
+| INFRA-05 | — | Pending |
+| INFRA-06 | — | Pending |
+| MCP-01 | — | Pending |
+| MCP-02 | — | Pending |
+| MCP-03 | — | Pending |
+
+**Coverage:**
+- v1 requirements: 16 total
+- Mapped to phases: 0
+- Unmapped: 16
+
+---
+*Requirements defined: 2026-04-07*
+*Last updated: 2026-04-07 after initial definition*
