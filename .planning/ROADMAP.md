@@ -13,7 +13,7 @@ Three phases build from the ground up: first, a working TypeScript project with 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - TypeScript project, database access, MCP server skeleton, and safety infrastructure (completed 2026-04-07)
-- [ ] **Phase 2: Core Tools** - `list_chats`, `get_messages`, and `get_messages_since` tools (primary polling workflow)
+- [x] **Phase 2: Core Tools** - `list_chats`, `get_messages`, and `get_messages_since` tools (primary polling workflow) (completed 2026-04-07)
 - [x] **Phase 3: Extended Tools** - `search_messages`, `get_contact`, `get_chat`, and `get_media_file` tools (completed 2026-04-08)
 
 ## Phase Details
@@ -43,11 +43,11 @@ Plans:
   1. Claude can call `list_chats` and receive all chats with contact/group name, last message preview, unread count, and chat ID
   2. Claude can call `get_messages` with a chat ID and receive messages filtered by optional date range and limit, with media metadata (type, filename) included alongside message text
   3. Claude can call `get_messages_since` with a timestamp and receive all new messages across every chat since that time, enabling a polling workflow
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 02-01-PLAN.md — Shared utilities (isoToAppleEpoch, message type map) and list_chats tool
-- [ ] 02-02-PLAN.md — get_messages and get_messages_since tools, wire all tools into server
+- [x] 02-02-PLAN.md — get_messages and get_messages_since tools, wire all tools into server
 
 ### Phase 3: Extended Tools
 **Goal**: Claude can search messages across all chats by keyword, look up contact details, get full chat information including group members, and retrieve media file contents
@@ -73,5 +73,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete   | 2026-04-07 |
-| 2. Core Tools | 1/2 | In Progress|  |
+| 2. Core Tools | 2/2 | Complete   | 2026-04-07 |
 | 3. Extended Tools | 2/2 | Complete   | 2026-04-08 |

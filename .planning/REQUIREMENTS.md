@@ -7,7 +7,7 @@
 
 ### Core Tools
 
-- [ ] **TOOL-01**: `list_chats` returns all chats with contact/group name, last message preview, unread count, and chat ID
+- [x] **TOOL-01**: `list_chats` returns all chats with contact/group name, last message preview, unread count, and chat ID
 - [x] **TOOL-02**: `get_messages` returns messages from a specific chat with optional date range and limit filters
 - [x] **TOOL-03**: `get_messages_since` returns messages across all chats since a given timestamp (for polling)
 - [x] **TOOL-04**: `search_messages` performs full-text search across all chats using FTS5 index with LIKE fallback
@@ -57,7 +57,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TOOL-01 | Phase 2 | Pending |
+| TOOL-01 | Phase 2 | Complete |
 | TOOL-02 | Phase 2 | Complete |
 | TOOL-03 | Phase 2 | Complete |
 | TOOL-04 | Phase 3 | Complete |
