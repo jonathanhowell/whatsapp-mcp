@@ -6,6 +6,10 @@ import { registerRefreshSnapshotTool } from "./tools/refresh-snapshot.js";
 import { registerListChatsTool } from "./tools/list-chats.js";
 import { registerGetMessagesTool } from "./tools/get-messages.js";
 import { registerGetMessagesSinceTool } from "./tools/get-messages-since.js";
+import { registerSearchMessagesTool } from "./tools/search-messages.js";
+import { registerGetChatTool } from "./tools/get-chat.js";
+import { registerGetContactTool } from "./tools/get-contact.js";
+import { registerGetMediaFileTool } from "./tools/get-media-file.js";
 import type { Config } from "./config/loader.js";
 
 async function main(): Promise<void> {
@@ -26,6 +30,10 @@ async function main(): Promise<void> {
   registerListChatsTool(server, getState);
   registerGetMessagesTool(server, getState);
   registerGetMessagesSinceTool(server, getState);
+  registerSearchMessagesTool(server, getState);
+  registerGetChatTool(server, getState);
+  registerGetContactTool(server, getState);
+  registerGetMediaFileTool(server, getState);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
