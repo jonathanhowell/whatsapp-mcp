@@ -1,16 +1,17 @@
 {
   "name": "whatsapp-mcp",
   "version": "1.0.0",
-  "description": "Read-only MCP server for WhatsApp Desktop messages",
+  "description": "Read-only MCP server for WhatsApp Desktop messages (macOS only)",
   "type": "module",
   "main": "build/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node build/index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["mcp", "whatsapp", "claude", "macos", "sqlite"],
+  "author": "Jonathan Howell",
+  "license": "MIT",
+  "os": ["darwin"],
   "engines": {
     "node": ">=20"
   },
