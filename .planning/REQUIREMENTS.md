@@ -14,9 +14,9 @@
 
 ### Extended Tools
 
-- [ ] **TOOL-05**: `get_contact` looks up contact details (name, phone number) by name or phone
+- [x] **TOOL-05**: `get_contact` looks up contact details (name, phone number) by name or phone
 - [ ] **TOOL-06**: `get_chat` returns detailed chat info including group members for group chats
-- [ ] **TOOL-07**: `get_media_file` retrieves a media file (image, voice note, document) by message ID
+- [x] **TOOL-07**: `get_media_file` retrieves a media file (image, voice note, document) by message ID
 
 ### Infrastructure
 
@@ -61,9 +61,9 @@
 | TOOL-02 | Phase 2 | Complete |
 | TOOL-03 | Phase 2 | Complete |
 | TOOL-04 | Phase 3 | Pending |
-| TOOL-05 | Phase 3 | Pending |
+| TOOL-05 | Phase 3 | Complete |
 | TOOL-06 | Phase 3 | Pending |
-| TOOL-07 | Phase 3 | Pending |
+| TOOL-07 | Phase 3 | Complete |
 | INFRA-01 | Phase 1 | Complete |
 | INFRA-02 | Phase 1 | Complete |
 | INFRA-03 | Phase 1 | Complete |
