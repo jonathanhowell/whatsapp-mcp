@@ -19,11 +19,14 @@ Claude can read WhatsApp messages to extract actionable tasks and answer questio
 - [x] Fetch messages from a specific chat with date and limit filters — Validated in Phase 2: Core Tools
 - [x] Fetch messages since a given timestamp (polling for new messages) — Validated in Phase 2: Core Tools
 - [x] Return media metadata (type, filename) alongside message text — Validated in Phase 2: Core Tools
+- [x] Full-text search across all chats by keyword — Validated in Phase 3: Extended Tools
+- [x] Look up contact details by name or phone — Validated in Phase 3: Extended Tools
+- [x] Retrieve detailed chat info including group members — Validated in Phase 3: Extended Tools
+- [x] Retrieve media files (images, voice notes, documents) by message ID — Validated in Phase 3: Extended Tools
 
 ### Active
 
-- [ ] Full-text search across all chats by keyword
-- [ ] Separate tool to retrieve/serve media files (images, voice notes, documents)
+No active requirements remaining for v1.
 
 ### Out of Scope
 
@@ -55,7 +58,9 @@ Claude can read WhatsApp messages to extract actionable tasks and answer questio
 | TypeScript + official MCP SDK | Best ecosystem support for MCP servers | Validated Phase 1 |
 | Read-only access | Safety — never risk corrupting WhatsApp data | Validated Phase 1 |
 | Snapshot + live DB support | Live DB may be locked; snapshots are safer for concurrent access | Validated Phase 1 |
-| Separate media tool | Keep message listing lightweight; fetch media on demand | — Pending |
+| Separate media tool | Keep message listing lightweight; fetch media on demand | Validated Phase 3 |
+| LIKE search over FTS5 | Research decision D-01: LIKE-only search simpler and sufficient for local DB sizes | Validated Phase 3 |
+| ContactsV2.sqlite per-call open | Contacts DB may not exist; open/close per call avoids startup failures | Validated Phase 3 |
 
 ## Evolution
 
@@ -75,4 +80,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after Phase 2 completion — core polling tools (list_chats, get_messages, get_messages_since) operational*
+*Last updated: 2026-04-08 after Phase 3 completion — all 8 MCP tools operational (list_chats, get_messages, get_messages_since, refresh_snapshot, search_messages, get_chat, get_contact, get_media_file)*
