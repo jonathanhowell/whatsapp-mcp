@@ -58,7 +58,11 @@ Plans:
   2. Claude can call `get_contact` with a name or phone number and receive the matching contact's details from ContactsV2.sqlite
   3. Claude can call `get_chat` with a chat ID and receive detailed chat info including the list of group members for group chats
   4. Claude can call `get_media_file` with a message ID and receive the media file contents (image, voice note, or document), or a clear error if the file does not exist or exceeds the size limit
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — search_messages and get_chat tools (ChatStorage.sqlite queries)
+- [ ] 03-02-PLAN.md — get_contact, get_media_file tools, and wire all Phase 3 tools into server
 **UI hint**: no
 
 ## Progress
@@ -70,4 +74,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete   | 2026-04-07 |
 | 2. Core Tools | 1/2 | In Progress|  |
-| 3. Extended Tools | 0/? | Not started | - |
+| 3. Extended Tools | 0/2 | Not started | - |
