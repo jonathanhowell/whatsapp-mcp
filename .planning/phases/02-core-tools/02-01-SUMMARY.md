@@ -107,6 +107,14 @@ None — no external service configuration required.
 - `list_chats` provides the chat_id values that Plan 02 uses to filter by chat
 - Pattern established: read-only tool registration with `getState` only (no setState)
 
+## Self-Check: PASSED
+
+- src/utils/time.ts: FOUND
+- src/tools/list-chats.ts: FOUND
+- 02-01-SUMMARY.md: FOUND
+- Commit cd66960: FOUND (Task 1 — time utilities)
+- Commit 670e0fb: FOUND (Task 2 — list_chats tool)
+
 ---
 *Phase: 02-core-tools*
 *Completed: 2026-04-07*

@@ -4,7 +4,6 @@ import type { Config } from "../config/loader.js";
 import {
   cleanOldSnapshots,
   createSnapshot,
-  getSnapshotPath,
 } from "./snapshot.js";
 import { validateSchema } from "./validate.js";
 

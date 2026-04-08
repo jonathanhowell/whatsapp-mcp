@@ -10,12 +10,12 @@
 - [ ] **TOOL-01**: `list_chats` returns all chats with contact/group name, last message preview, unread count, and chat ID
 - [x] **TOOL-02**: `get_messages` returns messages from a specific chat with optional date range and limit filters
 - [x] **TOOL-03**: `get_messages_since` returns messages across all chats since a given timestamp (for polling)
-- [ ] **TOOL-04**: `search_messages` performs full-text search across all chats using FTS5 index with LIKE fallback
+- [x] **TOOL-04**: `search_messages` performs full-text search across all chats using FTS5 index with LIKE fallback
 
 ### Extended Tools
 
 - [x] **TOOL-05**: `get_contact` looks up contact details (name, phone number) by name or phone
-- [ ] **TOOL-06**: `get_chat` returns detailed chat info including group members for group chats
+- [x] **TOOL-06**: `get_chat` returns detailed chat info including group members for group chats
 - [x] **TOOL-07**: `get_media_file` retrieves a media file (image, voice note, document) by message ID
 
 ### Infrastructure
@@ -60,9 +60,9 @@
 | TOOL-01 | Phase 2 | Pending |
 | TOOL-02 | Phase 2 | Complete |
 | TOOL-03 | Phase 2 | Complete |
-| TOOL-04 | Phase 3 | Pending |
+| TOOL-04 | Phase 3 | Complete |
 | TOOL-05 | Phase 3 | Complete |
-| TOOL-06 | Phase 3 | Pending |
+| TOOL-06 | Phase 3 | Complete |
 | TOOL-07 | Phase 3 | Complete |
 | INFRA-01 | Phase 1 | Complete |
 | INFRA-02 | Phase 1 | Complete |
