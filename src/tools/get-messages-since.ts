@@ -31,7 +31,7 @@ const GET_MESSAGES_SINCE_SQL = `
     m.ZMESSAGEDATE    AS message_date,
     m.ZMESSAGETYPE    AS message_type,
     m.ZISFROMME       AS is_from_me,
-    m.ZPUSHNAME       AS sender_name,
+    COALESCE(NULLIF(gm.ZCONTACTNAME, ''), sender_ppn.ZPUSHNAME, m.ZPUSHNAME) AS sender_name,
     mi.ZMEDIALOCALPATH AS media_path,
     mi.ZFILESIZE      AS media_file_size,
     mi.ZTITLE         AS media_title
@@ -39,6 +39,8 @@ const GET_MESSAGES_SINCE_SQL = `
   JOIN ZWACHATSESSION cs ON cs.Z_PK = m.ZCHATSESSION
   LEFT JOIN ZWAPROFILEPUSHNAME ppn ON ppn.ZJID = cs.ZCONTACTJID
   LEFT JOIN ZWAMEDIAITEM mi ON mi.Z_PK = m.ZMEDIAITEM
+  LEFT JOIN ZWAGROUPMEMBER gm ON gm.Z_PK = m.ZGROUPMEMBER
+  LEFT JOIN ZWAPROFILEPUSHNAME sender_ppn ON sender_ppn.ZJID = gm.ZMEMBERJID
   WHERE m.ZMESSAGEDATE > ?
   ORDER BY m.ZMESSAGEDATE ASC
   LIMIT ?

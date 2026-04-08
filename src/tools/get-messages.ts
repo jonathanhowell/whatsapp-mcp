@@ -26,13 +26,15 @@ const GET_MESSAGES_SQL = `
     m.ZMESSAGETYPE    AS message_type,
     m.ZISFROMME       AS is_from_me,
     m.ZFROMJID        AS from_jid,
-    m.ZPUSHNAME       AS sender_name,
+    COALESCE(NULLIF(gm.ZCONTACTNAME, ''), sender_ppn.ZPUSHNAME, m.ZPUSHNAME) AS sender_name,
     m.ZSTARRED        AS is_starred,
     mi.ZMEDIALOCALPATH AS media_path,
     mi.ZFILESIZE      AS media_file_size,
     mi.ZTITLE         AS media_title
   FROM ZWAMESSAGE m
   LEFT JOIN ZWAMEDIAITEM mi ON mi.Z_PK = m.ZMEDIAITEM
+  LEFT JOIN ZWAGROUPMEMBER gm ON gm.Z_PK = m.ZGROUPMEMBER
+  LEFT JOIN ZWAPROFILEPUSHNAME sender_ppn ON sender_ppn.ZJID = gm.ZMEMBERJID
   WHERE m.ZCHATSESSION = ?
     AND (? IS NULL OR m.ZMESSAGEDATE >= ?)
     AND (? IS NULL OR m.ZMESSAGEDATE <= ?)
