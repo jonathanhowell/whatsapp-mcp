@@ -8,7 +8,6 @@ interface ChatSessionRow {
   jid: string | null;
   partner_name: string | null;
   push_name: string | null;
-  contact_name: string | null;
   session_type: number | null;
   unread_count: number | null;
   last_message_date: number | null;
@@ -31,7 +30,6 @@ const LIST_CHATS_SQL = `
     cs.ZCONTACTJID     AS jid,
     cs.ZPARTNERNAME    AS partner_name,
     ppn.ZPUSHNAME      AS push_name,
-    cs.ZCONTACTNAME    AS contact_name,
     cs.ZSESSIONTYPE    AS session_type,
     cs.ZUNREADCOUNT    AS unread_count,
     cs.ZLASTMESSAGEDATE AS last_message_date,
@@ -78,7 +76,6 @@ export function registerListChatsTool(
           name:
             row.push_name ??
             row.partner_name ??
-            row.contact_name ??
             row.jid ??
             "Unknown",
           jid: row.jid,
