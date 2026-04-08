@@ -1,5 +1,11 @@
 node_modules/
 build/
+dist/
+coverage/
 *.js.map
+*.log
+.DS_Store
+.env*
 .claude/
 .mcp.json
+.planning/
