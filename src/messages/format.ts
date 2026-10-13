@@ -1,11 +1,17 @@
 import { appleEpochToISO, resolveMessageType } from "../utils/time.js";
 import { ProtoMessage } from "../utils/protobuf.js";
+import type { NameResolver } from "./names.js";
 
 /**
  * Columns shared by get_messages, get_messages_since and search_messages.
  * Expects aliases: m = ZWAMESSAGE, mi = ZWAMEDIAITEM (LEFT JOIN),
- * gm = ZWAGROUPMEMBER (LEFT JOIN), sender_ppn = ZWAPROFILEPUSHNAME on gm,
- * inf = ZWAMESSAGEINFO (LEFT JOIN).
+ * gm = ZWAGROUPMEMBER (LEFT JOIN), inf = ZWAMESSAGEINFO (LEFT JOIN),
+ * mcs = the message's ZWACHATSESSION.
+ *
+ * Sender: in groups the member JID (ZWAGROUPMEMBER.ZMEMBERJID); in 1:1 chats
+ * the chat partner (ZFROMJID is the group JID in groups, so it is only used
+ * for 1:1). ZWAMESSAGE.ZPUSHNAME is deliberately NOT used: it is a base64
+ * protobuf blob (e.g. "COiOqdUGIAA="), never a name.
  */
 export const MESSAGE_COLUMNS = `
     m.Z_PK            AS message_id,
@@ -15,7 +21,13 @@ export const MESSAGE_COLUMNS = `
     m.ZMESSAGETYPE    AS message_type,
     m.ZGROUPEVENTTYPE AS event_code,
     m.ZISFROMME       AS is_from_me,
-    COALESCE(NULLIF(gm.ZCONTACTNAME, ''), sender_ppn.ZPUSHNAME, m.ZPUSHNAME) AS sender_name,
+    CASE WHEN m.ZISFROMME = 1 THEN NULL
+         ELSE COALESCE(gm.ZMEMBERJID,
+                       CASE WHEN mcs.ZSESSIONTYPE = 0 THEN COALESCE(mcs.ZCONTACTJID, m.ZFROMJID) END)
+    END               AS sender_jid,
+    NULLIF(gm.ZCONTACTNAME, '') AS group_contact_name,
+    mcs.ZSESSIONTYPE  AS session_type,
+    NULLIF(mcs.ZPARTNERNAME, '') AS partner_name,
     mi.ZMEDIALOCALPATH AS media_path,
     mi.ZFILESIZE      AS media_file_size,
     mi.ZTITLE         AS media_title,
@@ -32,7 +44,7 @@ export const MESSAGE_JOINS = `
   LEFT JOIN ZWAMEDIAITEM mi ON mi.Z_PK = m.ZMEDIAITEM
   LEFT JOIN ZWAMESSAGEINFO inf ON inf.Z_PK = m.ZMESSAGEINFO
   LEFT JOIN ZWAGROUPMEMBER gm ON gm.Z_PK = m.ZGROUPMEMBER
-  LEFT JOIN ZWAPROFILEPUSHNAME sender_ppn ON sender_ppn.ZJID = gm.ZMEMBERJID`;
+  LEFT JOIN ZWACHATSESSION mcs ON mcs.Z_PK = m.ZCHATSESSION`;
 
 export interface MessageRow {
   message_id: number;
@@ -42,7 +54,10 @@ export interface MessageRow {
   message_type: number;
   event_code?: number | null;
   is_from_me: number;
-  sender_name: string | null;
+  sender_jid: string | null;
+  group_contact_name: string | null;
+  session_type: number | null;
+  partner_name: string | null;
   media_path: string | null;
   media_file_size: number | null;
   media_title: string | null;
@@ -81,6 +96,7 @@ export interface Reaction {
   /** Reactions by the account owner carry no reactor JID. */
   from_me: boolean;
   sender_jid: string | null;
+  sender_name?: string | null;
   timestamp: string | null;
 }
 
@@ -103,7 +119,10 @@ export interface FormattedMessage {
   timestamp: string | null;
   type: string;
   is_from_me: boolean;
+  /** Human-readable sender, or null if unresolved (and for own messages). */
   sender_name: string | null;
+  /** Raw sender JID (…@s.whatsapp.net or …@lid); null for own messages. */
+  sender_jid: string | null;
   text: string | null;
   media: MediaInfo | null;
   link?: { url: string | null; title: string | null };
@@ -232,14 +251,26 @@ function decodeBusinessText(row: MessageRow): string | null {
   return nonEmpty(parts.join("\n\n"));
 }
 
-export function formatMessage(row: MessageRow): FormattedMessage {
+/** Sender name: group contact name, then resolver; 1:1 inbound falls back to the chat's name. */
+export function resolveSenderName(row: MessageRow, names?: NameResolver): string | null {
+  if (row.is_from_me === 1) return null;
+  return (
+    row.group_contact_name ??
+    names?.resolve(row.sender_jid) ??
+    (row.session_type === 0 ? row.partner_name : null) ??
+    null
+  );
+}
+
+export function formatMessage(row: MessageRow, names?: NameResolver): FormattedMessage {
   let { text, media } = textAndMedia(row);
   const out: FormattedMessage = {
     message_id: row.message_id,
     timestamp: appleEpochToISO(row.message_date),
     type: resolveMessageType(row.message_type),
     is_from_me: row.is_from_me === 1,
-    sender_name: row.sender_name ?? null,
+    sender_name: resolveSenderName(row, names),
+    sender_jid: row.is_from_me === 1 ? null : row.sender_jid ?? null,
     text,
     media,
   };
@@ -287,6 +318,9 @@ export function formatMessage(row: MessageRow): FormattedMessage {
   }
 
   const reactions = decodeReactions(row.receipt_info);
-  if (reactions.length > 0) out.reactions = reactions;
+  if (reactions.length > 0) {
+    if (names) for (const r of reactions) r.sender_name = r.from_me ? null : names.resolve(r.sender_jid);
+    out.reactions = reactions;
+  }
   return out;
 }

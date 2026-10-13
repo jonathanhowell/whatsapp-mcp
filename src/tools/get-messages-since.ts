@@ -7,6 +7,7 @@ import {
   formatMessage,
   type MessageRow,
 } from "../messages/format.js";
+import { getNameResolver } from "../messages/names.js";
 import type { DatabaseHandle } from "../db/connection.js";
 import type { Config } from "../config/loader.js";
 
@@ -46,7 +47,8 @@ export function registerGetMessagesSinceTool(
       annotations: { readOnlyHint: true },
     },
     async (args) => {
-      const { handle } = await getState();
+      const { config, handle } = await getState();
+      const names = getNameResolver(handle, config.dbPath);
       try {
 
         const CAP = 1000;
@@ -98,7 +100,7 @@ export function registerGetMessagesSinceTool(
               messages: [],
             });
           }
-          chatMap.get(row.chat_session_id)!.messages.push(formatMessage(row));
+          chatMap.get(row.chat_session_id)!.messages.push(formatMessage(row, names));
         }
 
         const chats = Array.from(chatMap.values());

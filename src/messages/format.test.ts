@@ -174,7 +174,7 @@ describe("message types (audited mapping)", () => {
 
   it("reactions are attached to the message they react to (removed reactions skipped)", () => {
     assert.deepEqual(m[37172].reactions, [
-      { emoji: "👍", from_me: false, sender_jid: "100000000000002@lid", timestamp: new Date(1790000000000).toISOString() },
+      { emoji: "👍", from_me: false, sender_jid: "100000000000002@lid", timestamp: new Date(1790000000000).toISOString(), sender_name: null },
     ]);
     assert.equal(m[27444].reactions, undefined);
   });

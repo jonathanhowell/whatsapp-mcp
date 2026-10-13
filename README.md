@@ -71,11 +71,16 @@ Or for Claude Code, add to `.mcp.json` in your project:
   "type": "image",
   "is_from_me": false,
   "sender_name": "Alex",
+  "sender_jid": "100000000000001@lid",
   "text": "caption or message text",
   "media": { "filename": null, "file_size": 137588 }
 }
 ```
 
+- `sender_name` is resolved from your address book (`ContactsV2.sqlite`), the group's contact
+  name, push names and WhatsApp's `@lid` ↔ phone-number mapping (`LID.sqlite`), falling back to
+  the chat name for 1:1 chats. It is `null` when unresolved, and for your own messages.
+  `sender_jid` is always the raw JID, so callers can tell unresolved senders from resolved ones.
 - `text` holds the message text, **or the caption** for images, videos, GIFs, voice notes and
   documents. `search_messages` matches captions too.
 - `media.filename` is the real filename (the document title for documents) or `null`. It is

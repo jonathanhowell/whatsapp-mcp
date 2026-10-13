@@ -7,6 +7,7 @@ import {
   formatMessage,
   type MessageRow,
 } from "../messages/format.js";
+import { getNameResolver } from "../messages/names.js";
 import type { DatabaseHandle } from "../db/connection.js";
 import type { Config } from "../config/loader.js";
 
@@ -41,7 +42,8 @@ export function registerGetMessagesTool(
       annotations: { readOnlyHint: true },
     },
     async (args) => {
-      const { handle } = await getState();
+      const { config, handle } = await getState();
+      const names = getNameResolver(handle, config.dbPath);
       try {
 
         const effectiveLimit = Math.min(args.limit ?? 50, 1000);
@@ -85,7 +87,7 @@ export function registerGetMessagesTool(
           };
         }
 
-        const messages = returned.map(formatMessage);
+        const messages = returned.map((row) => formatMessage(row, names));
 
         return {
           content: [

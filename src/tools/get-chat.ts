@@ -3,6 +3,7 @@ import { z } from "zod";
 import { appleEpochToISO } from "../utils/time.js";
 import type { DatabaseHandle } from "../db/connection.js";
 import type { Config } from "../config/loader.js";
+import { getNameResolver } from "../messages/names.js";
 
 interface ChatRow {
   chat_id: number;
@@ -54,9 +55,8 @@ const GET_GROUP_MEMBERS_SQL = `
   SELECT
     gm.ZMEMBERJID    AS jid,
     gm.ZISADMIN      AS is_admin,
-    COALESCE(NULLIF(gm.ZCONTACTNAME, ''), ppn.ZPUSHNAME) AS display_name
+    NULLIF(gm.ZCONTACTNAME, '') AS display_name
   FROM ZWAGROUPMEMBER gm
-  LEFT JOIN ZWAPROFILEPUSHNAME ppn ON ppn.ZJID = gm.ZMEMBERJID
   WHERE gm.ZCHATSESSION = ?
     AND gm.ZISACTIVE = 1
   ORDER BY gm.ZISADMIN DESC, gm.ZMEMBERJID ASC
@@ -70,14 +70,14 @@ export function registerGetChatTool(
     "get_chat",
     {
       description:
-        "Get detailed information about a WhatsApp chat. For group chats, includes group members with JID and display name. Note: many group members may have display_name: null due to WhatsApp's @lid JID format.",
+        "Get detailed information about a WhatsApp chat. For group chats, includes group members with JID and display name (resolved from your address book, push names and WhatsApp's @lid mapping; null if unknown).",
       inputSchema: {
         chat_id: z.number().int().describe("The chat ID from list_chats"),
       },
       annotations: { readOnlyHint: true },
     },
     async (args) => {
-      const { handle } = await getState();
+      const { config, handle } = await getState();
       try {
 
         const chatRow = handle.db
@@ -100,6 +100,7 @@ export function registerGetChatTool(
 
         if (chatRow.session_type === 1) {
           // Group chat — query members
+          const names = getNameResolver(handle, config.dbPath);
           const members = handle.db
             .prepare(GET_GROUP_MEMBERS_SQL)
             .all(args.chat_id) as MemberRow[];
@@ -112,7 +113,7 @@ export function registerGetChatTool(
             members: members.map((m) => ({
               jid: m.jid,
               is_admin: m.is_admin === 1,
-              display_name: m.display_name ?? null,
+              display_name: m.display_name ?? names.resolve(m.jid),
             })),
           };
         }
