@@ -9,6 +9,7 @@ A read-only [MCP](https://modelcontextprotocol.io) server that gives Claude acce
 - **macOS** (no Windows/Linux support — relies on the macOS WhatsApp Desktop app)
 - [WhatsApp Desktop](https://apps.apple.com/app/whatsapp-messenger/id310633997) (native Mac app, not the web version)
 - Node.js >= 20
+- Full Disk Access for the app that launches the server (Terminal, Claude, or a launchd job's binary)
 
 ## Install
 
@@ -18,6 +19,19 @@ cd whatsapp-mcp
 npm install
 npm run build
 ```
+
+### Upgrading
+
+```bash
+cd whatsapp-mcp
+git pull
+npm install
+npm rebuild better-sqlite3   # also needed after every Node.js upgrade (e.g. via Homebrew)
+npm run build
+```
+
+Then restart or reconnect each MCP client (in Claude Code: `/mcp` → whatsapp-mcp → Reconnect).
+Every client session starts its own server process.
 
 ## Setup
 
@@ -52,13 +66,13 @@ Or for Claude Code, add to `.mcp.json` in your project:
 | Tool | Description |
 |------|-------------|
 | `list_chats` | List all chats with metadata |
-| `get_messages` | Get messages from a specific chat |
-| `get_messages_since` | Poll for new messages since a timestamp |
-| `search_messages` | Search messages by keyword |
-| `get_chat` | Get chat details including group members |
+| `get_messages` | Get messages from a specific chat, with date filtering and pagination |
+| `get_messages_since` | Poll for new messages across all chats since a timestamp |
+| `search_messages` | Search message text and captions by keyword |
+| `get_chat` | Get chat details, including group members with resolved names |
 | `get_contact` | Look up a contact by name or phone number |
 | `get_media_file` | Retrieve an image, PDF/document, voice note or video. Copies it to `$TMPDIR/whatsapp-mcp/media/` and returns `{path, mime_type, byte_size}` (or base64 with `inline: true`, ≤ 5 MB). Reports `status`: `ok` / `no_media` / `not_downloaded` / `missing` |
-| `refresh_snapshot` | Re-snapshot the database for fresh data |
+| `refresh_snapshot` | Re-snapshot the database for fresh data; keeps the previous snapshot if it fails |
 
 ## Message format
 
@@ -66,14 +80,14 @@ Or for Claude Code, add to `.mcp.json` in your project:
 
 ```json
 {
-  "message_id": 32931,
-  "timestamp": "2026-09-10T13:07:00.000Z",
+  "message_id": 1234,
+  "timestamp": "2026-01-01T12:00:00.000Z",
   "type": "image",
   "is_from_me": false,
   "sender_name": "Alex",
   "sender_jid": "100000000000001@lid",
   "text": "caption or message text",
-  "media": { "filename": null, "file_size": 137588 },
+  "media": { "filename": null, "file_size": 123456 },
   "quoted": null
 }
 ```
@@ -110,8 +124,10 @@ original message is no longer in the database, `message_id` is `null` and `text`
 stored snapshot of the quoted text.
 
 Reactions are not separate messages. WhatsApp stores them on the message being reacted to, so
-they appear as `reactions: [{emoji, from_me, sender_jid, timestamp}]` on that message (the key
-is omitted when there are none).
+they appear as `reactions: [{emoji, from_me, sender_jid, sender_name, timestamp}]` on that
+message (the key is omitted when there are none).
+
+For how each of these fields is stored in WhatsApp's database, see [docs/SCHEMA.md](docs/SCHEMA.md).
 
 ## Configuration
 
@@ -170,9 +186,25 @@ Environment variables override the config file:
 - **`Cannot open WhatsApp database`**: grant Full Disk Access to the app that launches the
   server (Terminal, Claude, or the launchd job's binary).
 
+## Development
+
+```bash
+npm test            # node:test suites (fixtures are synthetic; no real WhatsApp data needed)
+npm run typecheck   # type-check sources and tests
+npm run build       # compile to build/
+```
+
+Code layout: `src/db/` (snapshot lifecycle and connections), `src/messages/` (message
+formatting and name resolution), `src/tools/` (one file per MCP tool). Test fixtures must
+never contain real message content, names or WhatsApp IDs.
+
 ## Privacy
 
-All data stays on your machine. No external API calls. The server is strictly read-only — it cannot modify your WhatsApp data.
+All data stays on your machine. No external API calls: media that WhatsApp hasn't downloaded
+is reported as `not_downloaded`, not fetched. The server is strictly read-only and cannot
+modify your WhatsApp data. It does write copies to your user temp directory: database
+snapshots in `$TMPDIR/whatsapp-mcp/`, and exported media in `$TMPDIR/whatsapp-mcp/media/`
+(pruned after 24 hours).
 
 ## License
 
