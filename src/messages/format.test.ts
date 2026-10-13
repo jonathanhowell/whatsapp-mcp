@@ -194,3 +194,73 @@ describe("message types (audited mapping)", () => {
     assert.equal(m[37090].media, null);
   });
 });
+
+describe("quoted replies", () => {
+  let work: string;
+  let h: ReturnType<typeof toolHarness>;
+
+  before(() => {
+    work = makeTmpDir();
+    const db = makeFakeChatStorage(work, (d) => {
+      d.exec(`
+        INSERT INTO ZWACHATSESSION (Z_PK, ZPARTNERNAME, ZCONTACTJID, ZSESSIONTYPE) VALUES (712, 'Garden', '9@s.whatsapp.net', 0), (99, 'Other', '8@s.whatsapp.net', 0);
+        INSERT INTO ZWAMEDIAITEM (Z_PK, ZTITLE, ZFILESIZE) VALUES (50, 'Photo of the hose', 1000);
+      `);
+      const media = d.prepare("INSERT INTO ZWAMEDIAITEM (Z_PK, ZMETADATA) VALUES (?, ?)");
+      const msg = d.prepare(
+        "INSERT INTO ZWAMESSAGE (Z_PK, ZCHATSESSION, ZMEDIAITEM, ZMESSAGETYPE, ZISFROMME, ZMESSAGEDATE, ZTEXT, ZSTANZAID) VALUES (?,?,?,?,?,?,?,?)"
+      );
+      msg.run(872, 712, null, 0, 0, 100, "It's us. We will swap it shortly.", "3AAAAAAAAAAAAAAAAAAA");
+      msg.run(873, 712, 50, 1, 1, 101, null, "MYPHOTO");
+      // same stanza id in another chat must not be matched
+      msg.run(900, 99, null, 0, 0, 102, "wrong chat", "DUP");
+      media.run(1, pb([[5, "3AAAAAAAAAAAAAAAAAAA"], [6, "100000000000003@lid"], [19, [[1, "It's us…"]]]]));
+      msg.run(3, 712, 1, 0, 1, 103, "No problem - and no hurry!", "R1");
+      media.run(2, pb([[5, "MYPHOTO"], [19, [[1, ""]]]]));
+      msg.run(4, 712, 2, 0, 0, 104, "Lovely", "R2");
+      media.run(3, pb([[5, "GONE"], [6, "100000000000003@lid"], [19, [[1, "a deleted message"]]]]));
+      msg.run(5, 712, 3, 0, 0, 105, "replying to something deleted", "R3");
+      media.run(4, pb([[5, "DUP"], [19, [[1, "dup"]]]]));
+      msg.run(6, 712, 4, 0, 0, 106, "x", "R4");
+    });
+    h = toolHarness(db);
+    registerGetMessagesTool(h.server, h.getState);
+    registerSearchMessagesTool(h.server, h.getState);
+  });
+  after(() => {
+    h.close();
+    fs.rmSync(work, { recursive: true, force: true });
+  });
+
+  it("links a reply to the quoted message with its text and sender", async () => {
+    const m = Object.fromEntries((await h.call("get_messages", { chat_id: 712 })).messages.map((x: any) => [x.message_id, x]));
+    assert.deepEqual(m[3].quoted, {
+      message_id: 872,
+      text: "It's us. We will swap it shortly.",
+      is_from_me: false,
+      sender_name: "Garden",
+      sender_jid: "9@s.whatsapp.net",
+    });
+    assert.equal(m[4].quoted.message_id, 873);
+    assert.equal(m[4].quoted.is_from_me, true);
+    assert.equal(m[4].quoted.text, "Photo of the hose", "quoted image shows its caption");
+    assert.equal(m[872].quoted, null);
+  });
+
+  it("keeps the quoted snapshot when the original is gone, and never matches another chat", async () => {
+    const m = Object.fromEntries((await h.call("get_messages", { chat_id: 712 })).messages.map((x: any) => [x.message_id, x]));
+    assert.deepEqual(m[5].quoted, {
+      message_id: null,
+      text: "a deleted message",
+      is_from_me: null,
+      sender_name: null,
+      sender_jid: "100000000000003@lid",
+    });
+    assert.equal(m[6].quoted.message_id, null);
+  });
+
+  it("search_messages includes quoted context", async () => {
+    const res = await h.call("search_messages", { query: "no hurry" });
+    assert.equal(res.chats[0].messages[0].quoted.message_id, 872);
+  });
+});

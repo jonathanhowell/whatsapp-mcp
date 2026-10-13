@@ -73,7 +73,8 @@ Or for Claude Code, add to `.mcp.json` in your project:
   "sender_name": "Alex",
   "sender_jid": "100000000000001@lid",
   "text": "caption or message text",
-  "media": { "filename": null, "file_size": 137588 }
+  "media": { "filename": null, "file_size": 137588 },
+  "quoted": null
 }
 ```
 
@@ -103,6 +104,10 @@ Or for Claude Code, add to `.mcp.json` in your project:
 | `system`, `group_event` | Chat notices (E2E-encryption banner, joins/leaves, …) |
 | `list_response`, `button_response`, `group_invite` | Business replies, group invite links |
 | `unknown(N)` | Rare types with no identified user content |
+
+`quoted` is set on replies: `{message_id, text, is_from_me, sender_name, sender_jid}`. If the
+original message is no longer in the database, `message_id` is `null` and `text` is WhatsApp's
+stored snapshot of the quoted text.
 
 Reactions are not separate messages. WhatsApp stores them on the message being reacted to, so
 they appear as `reactions: [{emoji, from_me, sender_jid, timestamp}]` on that message (the key

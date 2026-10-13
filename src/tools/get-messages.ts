@@ -4,7 +4,7 @@ import { appleEpochToISO, isoToAppleEpoch } from "../utils/time.js";
 import {
   MESSAGE_COLUMNS,
   MESSAGE_JOINS,
-  formatMessage,
+  formatMessages,
   type MessageRow,
 } from "../messages/format.js";
 import { getNameResolver } from "../messages/names.js";
@@ -87,7 +87,7 @@ export function registerGetMessagesTool(
           };
         }
 
-        const messages = returned.map((row) => formatMessage(row, names));
+        const messages = formatMessages(handle.db, returned, names);
 
         return {
           content: [

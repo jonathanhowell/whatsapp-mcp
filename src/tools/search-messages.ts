@@ -5,7 +5,7 @@ import {
   MESSAGE_COLUMNS,
   MESSAGE_JOINS,
   TEXT_OR_CAPTION_LIKE,
-  formatMessage,
+  formatMessages,
   type MessageRow,
 } from "../messages/format.js";
 import { getNameResolver } from "../messages/names.js";
@@ -123,7 +123,8 @@ export function registerSearchMessagesTool(
           { chat_id: number; chat_name: string; messages: object[] }
         >();
 
-        for (const row of returned) {
+        const formatted = formatMessages(handle.db, returned, names);
+        returned.forEach((row, i) => {
           if (!chatMap.has(row.chat_session_id)) {
             chatMap.set(row.chat_session_id, {
               chat_id: row.chat_session_id,
@@ -132,8 +133,8 @@ export function registerSearchMessagesTool(
               messages: [],
             });
           }
-          chatMap.get(row.chat_session_id)!.messages.push(formatMessage(row, names));
-        }
+          chatMap.get(row.chat_session_id)!.messages.push(formatted[i]);
+        });
 
         const chats = Array.from(chatMap.values());
 

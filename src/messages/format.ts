@@ -1,3 +1,4 @@
+import type Database from "better-sqlite3";
 import { appleEpochToISO, resolveMessageType } from "../utils/time.js";
 import { ProtoMessage } from "../utils/protobuf.js";
 import type { NameResolver } from "./names.js";
@@ -132,6 +133,17 @@ export interface FormattedMessage {
   poll?: PollInfo;
   reactions?: Reaction[];
   event_code?: number;
+  /** The message this one replies to, or null. */
+  quoted: QuotedMessage | null;
+}
+
+export interface QuotedMessage {
+  /** null when the quoted message is not in the database (deleted / never synced). */
+  message_id: number | null;
+  text: string | null;
+  is_from_me: boolean | null;
+  sender_name: string | null;
+  sender_jid: string | null;
 }
 
 function nonEmpty(s: string | null | undefined): string | null {
@@ -273,6 +285,7 @@ export function formatMessage(row: MessageRow, names?: NameResolver): FormattedM
     sender_jid: row.is_from_me === 1 ? null : row.sender_jid ?? null,
     text,
     media,
+    quoted: null,
   };
 
   switch (row.message_type) {
@@ -322,5 +335,65 @@ export function formatMessage(row: MessageRow, names?: NameResolver): FormattedM
     if (names) for (const r of reactions) r.sender_name = r.from_me ? null : names.resolve(r.sender_jid);
     out.reactions = reactions;
   }
+  return out;
+}
+
+// Replies: ZWAMEDIAITEM.ZMETADATA field 5 = quoted message's ZSTANZAID,
+// 6 = quoted sender JID, 19.1 = snapshot of the quoted text. (ZPARENTMESSAGE
+// is NOT the reply link: in the audited DB it is set on only 7 rows, mostly
+// group events pointing at e.g. a pinned message.)
+export function decodeQuote(metadata: Buffer | null | undefined) {
+  const meta = ProtoMessage.decode(metadata);
+  const stanzaId = meta.str(5);
+  if (!stanzaId) return null;
+  return { stanzaId, senderJid: meta.str(6), text: meta.path(19).str(1) };
+}
+
+const QUOTED_SQL = (n: number) => `
+  SELECT${MESSAGE_COLUMNS}, m.ZSTANZAID AS stanza_id
+  FROM ZWAMESSAGE m${MESSAGE_JOINS}
+  WHERE m.ZSTANZAID IN (${Array(n).fill("?").join(", ")})`;
+
+/**
+ * Format rows and attach `quoted` context. Quoted messages are looked up in
+ * one batched query by stanza ID (indexed), matched within the same chat.
+ */
+export function formatMessages(
+  db: Database.Database,
+  rows: MessageRow[],
+  names?: NameResolver
+): FormattedMessage[] {
+  const out = rows.map((r) => formatMessage(r, names));
+  const quotes = rows.map((r) => decodeQuote(r.metadata));
+  const ids = [...new Set(quotes.flatMap((q) => (q ? [q.stanzaId] : [])))];
+  const targets = new Map<string, MessageRow & { stanza_id: string }>();
+  for (let i = 0; i < ids.length; i += 500) {
+    const chunk = ids.slice(i, i + 500);
+    for (const t of db.prepare(QUOTED_SQL(chunk.length)).all(...chunk) as Array<MessageRow & { stanza_id: string }>) {
+      targets.set(`${t.chat_session_id}:${t.stanza_id}`, t);
+    }
+  }
+  quotes.forEach((q, i) => {
+    if (!q) return;
+    const target = targets.get(`${rows[i].chat_session_id}:${q.stanzaId}`);
+    if (target) {
+      const f = formatMessage(target, names);
+      out[i].quoted = {
+        message_id: f.message_id,
+        text: f.text ?? q.text,
+        is_from_me: f.is_from_me,
+        sender_name: f.sender_name,
+        sender_jid: f.sender_jid,
+      };
+    } else {
+      out[i].quoted = {
+        message_id: null,
+        text: q.text,
+        is_from_me: null,
+        sender_name: names?.resolve(q.senderJid) ?? null,
+        sender_jid: q.senderJid,
+      };
+    }
+  });
   return out;
 }
