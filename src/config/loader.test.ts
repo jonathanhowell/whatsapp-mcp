@@ -12,6 +12,7 @@ function saveEnv() {
   savedEnv = {
     WHATSAPP_DB_PATH: process.env.WHATSAPP_DB_PATH,
     WHATSAPP_DB_MODE: process.env.WHATSAPP_DB_MODE,
+    WHATSAPP_SNAPSHOT_TIMEOUT_SECONDS: process.env.WHATSAPP_SNAPSHOT_TIMEOUT_SECONDS,
   };
 }
 
@@ -42,6 +43,7 @@ describe("loadConfig", () => {
     saveEnv();
     delete process.env.WHATSAPP_DB_PATH;
     delete process.env.WHATSAPP_DB_MODE;
+    delete process.env.WHATSAPP_SNAPSHOT_TIMEOUT_SECONDS;
     // Ensure test config file doesn't exist at start of each test
     if (fs.existsSync(tmpConfigPath)) {
       fs.unlinkSync(tmpConfigPath);
@@ -97,5 +99,15 @@ describe("loadConfig", () => {
     assert.doesNotThrow(() => loadConfig(missingPath));
     const config = loadConfig(missingPath);
     assert.strictEqual(config.mode, "snapshot");
+  });
+
+  it("snapshot timeout defaults to 60s, reads TOML, and env overrides", () => {
+    assert.strictEqual(loadConfig(path.join(tmpDir, "none.toml")).snapshotTimeoutSeconds, 60);
+    fs.writeFileSync(tmpConfigPath, "snapshot_timeout_seconds = 15\n");
+    assert.strictEqual(loadConfig(tmpConfigPath).snapshotTimeoutSeconds, 15);
+    process.env.WHATSAPP_SNAPSHOT_TIMEOUT_SECONDS = "5";
+    assert.strictEqual(loadConfig(tmpConfigPath).snapshotTimeoutSeconds, 5);
+    process.env.WHATSAPP_SNAPSHOT_TIMEOUT_SECONDS = "nonsense";
+    assert.strictEqual(loadConfig(tmpConfigPath).snapshotTimeoutSeconds, 15);
   });
 });

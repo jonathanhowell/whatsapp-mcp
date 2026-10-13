@@ -48,7 +48,7 @@ const GET_MESSAGES_SINCE_SQL = `
 
 export function registerGetMessagesSinceTool(
   server: McpServer,
-  getState: () => { config: Config; handle: DatabaseHandle }
+  getState: () => Promise<{ config: Config; handle: DatabaseHandle }>
 ): void {
   server.registerTool(
     "get_messages_since",
@@ -63,8 +63,8 @@ export function registerGetMessagesSinceTool(
       annotations: { readOnlyHint: true },
     },
     async (args) => {
+      const { handle } = await getState();
       try {
-        const { handle } = getState();
 
         const CAP = 1000;
         const sinceApple = isoToAppleEpoch(args.since);

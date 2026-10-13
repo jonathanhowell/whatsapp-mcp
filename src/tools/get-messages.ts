@@ -44,7 +44,7 @@ const GET_MESSAGES_SQL = `
 
 export function registerGetMessagesTool(
   server: McpServer,
-  getState: () => { config: Config; handle: DatabaseHandle }
+  getState: () => Promise<{ config: Config; handle: DatabaseHandle }>
 ): void {
   server.registerTool(
     "get_messages",
@@ -63,8 +63,8 @@ export function registerGetMessagesTool(
       annotations: { readOnlyHint: true },
     },
     async (args) => {
+      const { handle } = await getState();
       try {
-        const { handle } = getState();
 
         const effectiveLimit = Math.min(args.limit ?? 50, 1000);
         const sinceApple = args.since ? isoToAppleEpoch(args.since) : null;

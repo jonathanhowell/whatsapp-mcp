@@ -6,11 +6,21 @@ import os from "node:os";
 export interface Config {
   dbPath: string;
   mode: "snapshot" | "live";
+  /** Deadline for creating a snapshot before it is aborted. */
+  snapshotTimeoutSeconds: number;
 }
 
 interface TomlConfig {
   db_path?: string;
   mode?: string;
+  snapshot_timeout_seconds?: number;
+}
+
+const DEFAULT_SNAPSHOT_TIMEOUT_SECONDS = 60;
+
+function positiveNumber(v: unknown): number | undefined {
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
 const DEFAULT_DB_PATH = path.join(
@@ -31,6 +41,7 @@ export function loadConfig(configPath?: string): Config {
   const defaults: Config = {
     dbPath: DEFAULT_DB_PATH,
     mode: "snapshot",
+    snapshotTimeoutSeconds: DEFAULT_SNAPSHOT_TIMEOUT_SECONDS,
   };
 
   let fileConfig: Partial<Config> = {};
@@ -46,6 +57,11 @@ export function loadConfig(configPath?: string): Config {
     if (parsed.mode === "live" || parsed.mode === "snapshot") {
       fileConfig.mode = parsed.mode;
     }
+
+    const timeout = positiveNumber(parsed.snapshot_timeout_seconds);
+    if (timeout !== undefined) {
+      fileConfig.snapshotTimeoutSeconds = timeout;
+    }
   }
 
   const merged: Config = {
@@ -60,6 +76,11 @@ export function loadConfig(configPath?: string): Config {
 
   if (process.env.WHATSAPP_DB_MODE === "live" || process.env.WHATSAPP_DB_MODE === "snapshot") {
     merged.mode = process.env.WHATSAPP_DB_MODE;
+  }
+
+  const envTimeout = positiveNumber(process.env.WHATSAPP_SNAPSHOT_TIMEOUT_SECONDS);
+  if (envTimeout !== undefined) {
+    merged.snapshotTimeoutSeconds = envTimeout;
   }
 
   return merged;

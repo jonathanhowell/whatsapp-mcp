@@ -45,7 +45,7 @@ const SIZE_LIMIT = 5 * 1024 * 1024; // 5 MB (D-05)
 
 export function registerGetMediaFileTool(
   server: McpServer,
-  getState: () => { config: Config; handle: DatabaseHandle }
+  getState: () => Promise<{ config: Config; handle: DatabaseHandle }>
 ): void {
   server.registerTool(
     "get_media_file",
@@ -61,8 +61,8 @@ export function registerGetMediaFileTool(
       annotations: { readOnlyHint: true },
     },
     async (args) => {
+      const { config, handle } = await getState();
       try {
-        const { config, handle } = getState();
 
         const row = handle.db
           .prepare(GET_MEDIA_FILE_SQL)

@@ -64,7 +64,7 @@ const GET_GROUP_MEMBERS_SQL = `
 
 export function registerGetChatTool(
   server: McpServer,
-  getState: () => { config: Config; handle: DatabaseHandle }
+  getState: () => Promise<{ config: Config; handle: DatabaseHandle }>
 ): void {
   server.registerTool(
     "get_chat",
@@ -77,8 +77,8 @@ export function registerGetChatTool(
       annotations: { readOnlyHint: true },
     },
     async (args) => {
+      const { handle } = await getState();
       try {
-        const { handle } = getState();
 
         const chatRow = handle.db
           .prepare(GET_CHAT_SQL)

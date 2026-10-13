@@ -3,7 +3,6 @@ import { z } from "zod";
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-import type { DatabaseHandle } from "../db/connection.js";
 import type { Config } from "../config/loader.js";
 
 interface ContactRow {
@@ -36,7 +35,7 @@ const GET_CONTACT_SQL = `
 
 export function registerGetContactTool(
   server: McpServer,
-  getState: () => { config: Config; handle: DatabaseHandle }
+  getConfig: () => Config
 ): void {
   server.registerTool(
     "get_contact",
@@ -50,7 +49,7 @@ export function registerGetContactTool(
     },
     async (args) => {
       try {
-        const { config } = getState();
+        const config = getConfig();
 
         const contactsDbPath = path.join(
           path.dirname(config.dbPath),

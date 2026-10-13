@@ -15,10 +15,9 @@ export function validateSchema(db: Database.Database): void {
   const missing = REQUIRED_TABLES.filter((t) => !tableNames.includes(t));
 
   if (missing.length > 0) {
-    process.stderr.write(
+    throw new Error(
       `WhatsApp database schema unexpected. Missing tables: ${missing.join(", ")}. ` +
-        `Ensure the WhatsApp Desktop app has been opened at least once.\n`
+        `Ensure the WhatsApp Desktop app has been opened at least once.`
     );
-    process.exit(1);
   }
 }

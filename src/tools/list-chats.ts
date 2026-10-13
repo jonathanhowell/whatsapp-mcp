@@ -41,7 +41,7 @@ const LIST_CHATS_SQL = `
 
 export function registerListChatsTool(
   server: McpServer,
-  getState: () => { config: Config; handle: DatabaseHandle }
+  getState: () => Promise<{ config: Config; handle: DatabaseHandle }>
 ): void {
   server.registerTool(
     "list_chats",
@@ -52,8 +52,8 @@ export function registerListChatsTool(
       annotations: { readOnlyHint: true },
     },
     async () => {
+      const { handle } = await getState();
       try {
-        const { handle } = getState();
         const rows = handle.db.prepare(LIST_CHATS_SQL).all() as ChatSessionRow[];
 
         if (rows.length === 0) {

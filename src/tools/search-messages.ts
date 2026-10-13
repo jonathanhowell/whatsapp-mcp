@@ -75,7 +75,7 @@ const SEARCH_MESSAGES_WITH_CURSOR_SQL = `
 
 export function registerSearchMessagesTool(
   server: McpServer,
-  getState: () => { config: Config; handle: DatabaseHandle }
+  getState: () => Promise<{ config: Config; handle: DatabaseHandle }>
 ): void {
   server.registerTool(
     "search_messages",
@@ -94,8 +94,8 @@ export function registerSearchMessagesTool(
       annotations: { readOnlyHint: true },
     },
     async (args) => {
+      const { handle } = await getState();
       try {
-        const { handle } = getState();
 
         // Escape special LIKE characters before wrapping in wildcards
         const escaped = args.query
