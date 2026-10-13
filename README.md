@@ -57,7 +57,7 @@ Or for Claude Code, add to `.mcp.json` in your project:
 | `search_messages` | Search messages by keyword |
 | `get_chat` | Get chat details including group members |
 | `get_contact` | Look up a contact by name or phone number |
-| `get_media_file` | Retrieve a media attachment as base64 |
+| `get_media_file` | Retrieve a media attachment; reports `status`: `ok` / `no_media` / `not_downloaded` / `missing` |
 | `refresh_snapshot` | Re-snapshot the database for fresh data |
 
 ## Configuration

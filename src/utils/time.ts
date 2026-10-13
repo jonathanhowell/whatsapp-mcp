@@ -18,6 +18,7 @@ export const MESSAGE_TYPE_MAP: Record<number, string> = {
   8:  "video",
   10: "document",
   14: "system",
+  19: "template", // WhatsApp Business template message (header/body/footer in ZMETADATA)
   59: "poll",
   66: "reaction",
 };
