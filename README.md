@@ -57,7 +57,7 @@ Or for Claude Code, add to `.mcp.json` in your project:
 | `search_messages` | Search messages by keyword |
 | `get_chat` | Get chat details including group members |
 | `get_contact` | Look up a contact by name or phone number |
-| `get_media_file` | Retrieve a media attachment; reports `status`: `ok` / `no_media` / `not_downloaded` / `missing` |
+| `get_media_file` | Retrieve an image, PDF/document, voice note or video. Copies it to `$TMPDIR/whatsapp-mcp/media/` and returns `{path, mime_type, byte_size}` (or base64 with `inline: true`, ≤ 5 MB). Reports `status`: `ok` / `no_media` / `not_downloaded` / `missing` |
 | `refresh_snapshot` | Re-snapshot the database for fresh data |
 
 ## Configuration

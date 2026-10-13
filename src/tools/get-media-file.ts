@@ -3,6 +3,7 @@ import { z } from "zod";
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { resolveMessageType } from "../utils/time.js";
 import type { DatabaseHandle } from "../db/connection.js";
 import type { Config } from "../config/loader.js";
@@ -43,6 +44,7 @@ interface MediaRow {
   media_url: string | null;
   media_file_size: number | null;
   media_title: string | null;
+  text: string | null;
 }
 
 const GET_MEDIA_FILE_SQL = `
@@ -53,7 +55,8 @@ const GET_MEDIA_FILE_SQL = `
     mi.ZMEDIALOCALPATH AS media_path,
     mi.ZMEDIAURL      AS media_url,
     mi.ZFILESIZE      AS media_file_size,
-    mi.ZTITLE         AS media_title
+    mi.ZTITLE         AS media_title,
+    m.ZTEXT           AS text
   FROM ZWAMESSAGE m
   LEFT JOIN ZWAMEDIAITEM mi ON mi.Z_PK = m.ZMEDIAITEM
   WHERE m.Z_PK = ?
@@ -65,7 +68,52 @@ const LIVE_PATH_SQL = `
   WHERE m.Z_PK = ?
 `;
 
-const SIZE_LIMIT = 5 * 1024 * 1024; // 5 MB (D-05)
+const SIZE_LIMIT = 5 * 1024 * 1024; // 5 MB cap for inline: true (D-05)
+
+export const MEDIA_EXPORT_DIR = path.join(os.tmpdir(), "whatsapp-mcp", "media");
+const EXPORT_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Original filename where WhatsApp has one: for documents (type 8) ZTEXT is
+ * the document title. Images/videos have no original name, so use the local
+ * file's name. (ZTITLE is the caption, never a filename.)
+ */
+export function mediaFilename(row: Pick<MediaRow, "message_type" | "text">, fullPath: string): string {
+  const ext = path.extname(fullPath);
+  if (row.message_type === 8 && row.text) {
+    return path.extname(row.text).toLowerCase() === ext.toLowerCase() ? row.text : `${row.text}${ext}`;
+  }
+  return path.basename(fullPath);
+}
+
+/**
+ * Copy the attachment to a stable temp path the caller can read (it may not
+ * have Full Disk Access to WhatsApp's container). Exports older than a day
+ * are pruned on the way.
+ */
+export function exportMedia(
+  messageId: number,
+  fullPath: string,
+  filename: string,
+  dir: string = MEDIA_EXPORT_DIR
+): string {
+  fs.mkdirSync(dir, { recursive: true });
+  const now = Date.now();
+  for (const f of fs.readdirSync(dir)) {
+    try {
+      const p = path.join(dir, f);
+      if (now - fs.statSync(p).mtimeMs > EXPORT_TTL_MS) fs.unlinkSync(p);
+    } catch {
+      // raced with another instance
+    }
+  }
+  const safe = filename.replace(/[\/\0]/g, "_").replace(/^\.+/, "").slice(0, 120) || "file";
+  const dest = path.join(dir, `${messageId}-${safe}`);
+  const tmp = `${dest}.${process.pid}.tmp`;
+  fs.copyFileSync(fullPath, tmp);
+  fs.renameSync(tmp, dest);
+  return dest;
+}
 
 const NOT_DOWNLOADED_NOTE =
   "WhatsApp has not downloaded this attachment to this Mac yet. This server is read-only and " +
@@ -130,12 +178,18 @@ export function registerGetMediaFileTool(
     "get_media_file",
     {
       description:
-        "Retrieve a media file (image, voice note, document, video) from a WhatsApp message. Returns base64-encoded content for files under 5 MB, or a file path for larger files. Every response has a `status`: \"ok\" (file returned), \"no_media\" (the message has no attachment), \"not_downloaded\" (WhatsApp hasn't downloaded it to this Mac yet — open the chat in WhatsApp Desktop, then retry), or \"missing\" (it was downloaded but the file is gone).",
+        "Retrieve a media file from a WhatsApp message — images (e.g. photographed letters), PDFs and other documents, voice notes, videos, GIFs and stickers are all retrievable. By default the file is copied to a local temp path and the response is {status, path, mime_type, byte_size, filename}; read the file at `path` (images and PDFs can be viewed directly). Pass inline: true to get base64 content instead (files up to 5 MB). Every response has a `status`: \"ok\" (file returned), \"no_media\" (the message has no attachment), \"not_downloaded\" (WhatsApp hasn't downloaded it to this Mac yet — open the chat in WhatsApp Desktop, then retry), or \"missing\" (it was downloaded but the file is gone).",
       inputSchema: {
         message_id: z
           .number()
           .int()
           .describe("The message ID from get_messages or search_messages"),
+        inline: z
+          .boolean()
+          .optional()
+          .describe(
+            "Return the bytes inline as base64 (files up to 5 MB only). Default false: the file is written to a temp path and the path is returned."
+          ),
       },
       annotations: { readOnlyHint: true },
     },
@@ -201,49 +255,47 @@ export function registerGetMediaFileTool(
 
         const fullPath = media.fullPath!;
         const ext = path.extname(fullPath).toLowerCase();
+        const filename = mediaFilename(row, fullPath);
+        const mimeType = MIME_TYPES[ext] ?? "application/octet-stream";
+        const common = {
+          message_id: row.message_id,
+          status: "ok" as const,
+          found: true,
+          filename,
+          mime_type: mimeType,
+          byte_size: media.size,
+          // Pre-1.1 names, kept for compatibility
+          content_type: mimeType,
+          file_size: media.size,
+        };
 
-        if (media.size! > SIZE_LIMIT) {
+        if (args.inline && media.size! <= SIZE_LIMIT) {
+          const base64 = fs.readFileSync(fullPath).toString("base64");
           return {
             content: [
               {
                 type: "text",
-                text: JSON.stringify(
-                  {
-                    message_id: row.message_id,
-                    status: "ok",
-                    found: true,
-                    inline: false,
-                    filename: row.media_title ?? path.basename(fullPath),
-                    file_size: media.size,
-                    content_type: MIME_TYPES[ext] ?? "application/octet-stream",
-                    file_path: fullPath,
-                    note: "File exceeds 5 MB — use file_path to access directly",
-                  },
-                  null,
-                  2
-                ),
+                text: JSON.stringify({ ...common, inline: true, data: base64 }, null, 2),
               },
             ],
           };
         }
 
-        const bytes = fs.readFileSync(fullPath);
-        const base64 = bytes.toString("base64");
-
+        const exported = exportMedia(row.message_id, fullPath, filename);
         return {
           content: [
             {
               type: "text",
               text: JSON.stringify(
                 {
-                  message_id: row.message_id,
-                  status: "ok",
-                  found: true,
-                  inline: true,
-                  filename: row.media_title ?? path.basename(fullPath),
-                  file_size: media.size,
-                  content_type: MIME_TYPES[ext] ?? "application/octet-stream",
-                  data: base64,
+                  ...common,
+                  inline: false,
+                  path: exported,
+                  file_path: exported,
+                  source_path: fullPath,
+                  ...(args.inline
+                    ? { note: "File exceeds 5 MB, so it was not inlined — read it from `path`" }
+                    : {}),
                 },
                 null,
                 2

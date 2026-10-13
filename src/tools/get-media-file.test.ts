@@ -2,7 +2,7 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { resolveMedia } from "./get-media-file.js";
+import { exportMedia, mediaFilename, resolveMedia } from "./get-media-file.js";
 import { makeTmpDir } from "../test/fixtures.js";
 
 const row = (o: Partial<Parameters<typeof resolveMedia>[0]>) => ({
@@ -13,6 +13,7 @@ const row = (o: Partial<Parameters<typeof resolveMedia>[0]>) => ({
   media_url: "https://mmg.whatsapp.net/x",
   media_file_size: 100,
   media_title: null,
+  text: null,
   ...o,
 });
 const noLive = () => null;
@@ -55,5 +56,38 @@ describe("resolveMedia", () => {
       assert.equal(resolveMedia(row({ message_type: t }), base, noLive).status, "no_media", `type ${t}`);
     }
     assert.equal(resolveMedia(row({ media_item_id: null }), base, noLive).status, "no_media");
+  });
+});
+
+describe("mediaFilename", () => {
+  it("uses the document title (ZTEXT) for documents, adding the extension", () => {
+    assert.equal(mediaFilename({ message_type: 8, text: "Example Corp Org Chart" }, "/x/uuid.pdf"), "Example Corp Org Chart.pdf");
+    assert.equal(mediaFilename({ message_type: 8, text: "Report.PDF" }, "/x/uuid.pdf"), "Report.PDF");
+  });
+  it("uses the local file name for images (never the caption)", () => {
+    assert.equal(mediaFilename({ message_type: 1, text: null }, "/x/abc.jpg"), "abc.jpg");
+  });
+});
+
+describe("exportMedia", () => {
+  let dir: string;
+  before(() => (dir = makeTmpDir()));
+  after(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+  it("copies the file to a readable temp path and prunes day-old exports", () => {
+    const src = path.join(dir, "src.jpg");
+    fs.writeFileSync(src, "bytes");
+    const out = path.join(dir, "out");
+    fs.mkdirSync(out);
+    const old = path.join(out, "1-old.jpg");
+    fs.writeFileSync(old, "x");
+    const twoDaysAgo = new Date(Date.now() - 2 * 86400_000);
+    fs.utimesSync(old, twoDaysAgo, twoDaysAgo);
+
+    const p = exportMedia(42, src, "../evil/name.jpg", out);
+    assert.equal(path.dirname(p), out);
+    assert.equal(path.basename(p), "42-_evil_name.jpg");
+    assert.equal(fs.readFileSync(p, "utf8"), "bytes");
+    assert.ok(!fs.existsSync(old));
   });
 });
