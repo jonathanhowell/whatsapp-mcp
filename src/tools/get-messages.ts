@@ -1,40 +1,18 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { appleEpochToISO, isoToAppleEpoch, resolveMessageType } from "../utils/time.js";
+import { appleEpochToISO, isoToAppleEpoch } from "../utils/time.js";
+import {
+  MESSAGE_COLUMNS,
+  MESSAGE_JOINS,
+  formatMessage,
+  type MessageRow,
+} from "../messages/format.js";
 import type { DatabaseHandle } from "../db/connection.js";
 import type { Config } from "../config/loader.js";
 
-interface MessageRow {
-  message_id: number;
-  text: string | null;
-  message_date: number | null;
-  message_type: number;
-  is_from_me: number;
-  from_jid: string | null;
-  sender_name: string | null;
-  is_starred: number | null;
-  media_path: string | null;
-  media_file_size: number | null;
-  media_title: string | null;
-}
-
 const GET_MESSAGES_SQL = `
-  SELECT
-    m.Z_PK            AS message_id,
-    m.ZTEXT           AS text,
-    m.ZMESSAGEDATE    AS message_date,
-    m.ZMESSAGETYPE    AS message_type,
-    m.ZISFROMME       AS is_from_me,
-    m.ZFROMJID        AS from_jid,
-    COALESCE(NULLIF(gm.ZCONTACTNAME, ''), sender_ppn.ZPUSHNAME, m.ZPUSHNAME) AS sender_name,
-    m.ZSTARRED        AS is_starred,
-    mi.ZMEDIALOCALPATH AS media_path,
-    mi.ZFILESIZE      AS media_file_size,
-    mi.ZTITLE         AS media_title
-  FROM ZWAMESSAGE m
-  LEFT JOIN ZWAMEDIAITEM mi ON mi.Z_PK = m.ZMEDIAITEM
-  LEFT JOIN ZWAGROUPMEMBER gm ON gm.Z_PK = m.ZGROUPMEMBER
-  LEFT JOIN ZWAPROFILEPUSHNAME sender_ppn ON sender_ppn.ZJID = gm.ZMEMBERJID
+  SELECT${MESSAGE_COLUMNS}
+  FROM ZWAMESSAGE m${MESSAGE_JOINS}
   WHERE m.ZCHATSESSION = ?
     AND (? IS NULL OR m.ZMESSAGEDATE >= ?)
     AND (? IS NULL OR m.ZMESSAGEDATE <= ?)
@@ -107,21 +85,7 @@ export function registerGetMessagesTool(
           };
         }
 
-        const messages = returned.map((row) => ({
-          message_id: row.message_id,
-          timestamp: appleEpochToISO(row.message_date),
-          type: resolveMessageType(row.message_type),
-          is_from_me: row.is_from_me === 1,
-          sender_name: row.sender_name ?? null,
-          text: row.text ?? null,
-          media:
-            row.media_path || row.media_title || row.media_file_size
-              ? {
-                  filename: row.media_title ?? null,
-                  file_size: row.media_file_size ?? null,
-                }
-              : null,
-        }));
+        const messages = returned.map(formatMessage);
 
         return {
           content: [

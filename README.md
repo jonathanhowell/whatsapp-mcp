@@ -60,6 +60,27 @@ Or for Claude Code, add to `.mcp.json` in your project:
 | `get_media_file` | Retrieve an image, PDF/document, voice note or video. Copies it to `$TMPDIR/whatsapp-mcp/media/` and returns `{path, mime_type, byte_size}` (or base64 with `inline: true`, ≤ 5 MB). Reports `status`: `ok` / `no_media` / `not_downloaded` / `missing` |
 | `refresh_snapshot` | Re-snapshot the database for fresh data |
 
+## Message format
+
+`get_messages`, `get_messages_since` and `search_messages` return messages shaped like:
+
+```json
+{
+  "message_id": 32931,
+  "timestamp": "2026-09-10T13:07:00.000Z",
+  "type": "image",
+  "is_from_me": false,
+  "sender_name": "Alex",
+  "text": "caption or message text",
+  "media": { "filename": null, "file_size": 137588 }
+}
+```
+
+- `text` holds the message text, **or the caption** for images, videos, GIFs, voice notes and
+  documents. `search_messages` matches captions too.
+- `media.filename` is the real filename (the document title for documents) or `null`. It is
+  never the caption. Use `get_media_file` to fetch the file.
+
 ## Configuration
 
 Works out of the box with defaults. Optionally configure via `~/.config/whatsapp-mcp/config.toml`:
