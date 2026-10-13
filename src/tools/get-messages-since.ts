@@ -37,7 +37,7 @@ export function registerGetMessagesSinceTool(
     "get_messages_since",
     {
       description:
-        "Get all messages across all WhatsApp chats since a given timestamp. Results grouped by chat. Use for polling new messages.",
+        "Get all messages across all WhatsApp chats since a given timestamp. Results grouped by chat. Use for polling new messages. Messages have the same shape as get_messages (captions in text; call, poll, link, contact, location details; reactions).",
       inputSchema: {
         since: z.string().describe(
           "ISO 8601 timestamp (required). Return all messages across all chats after this time."

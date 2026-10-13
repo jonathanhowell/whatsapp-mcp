@@ -81,6 +81,28 @@ Or for Claude Code, add to `.mcp.json` in your project:
 - `media.filename` is the real filename (the document title for documents) or `null`. It is
   never the caption. Use `get_media_file` to fetch the file.
 
+### Message types
+
+| `type` | Notes |
+|--------|-------|
+| `text`, `image`, `video`, `audio`, `gif`, `sticker`, `video_note` | Captions are in `text` |
+| `document` | `text` = caption, `media.filename` = document title |
+| `link` | Text with a link preview: `link: {url, title}` |
+| `contact` | Shared contact card: `contact: {name, vcard}`; `text` = name |
+| `location` | `location: {latitude, longitude}` |
+| `call` | Voice/video call event: `call: {direction, video, duration_seconds, outcome, missed}`; `text` is a summary such as `"Missed voice call"` |
+| `poll` | `poll: {question, options: [{name, votes}], max_selections}`; `text` lists the options |
+| `template`, `interactive` | WhatsApp Business messages; `text` is decoded from the message body |
+| `album` | Header row for a group of photos (the images follow as separate messages) |
+| `deleted` | "This message was deleted" |
+| `system`, `group_event` | Chat notices (E2E-encryption banner, joins/leaves, …) |
+| `list_response`, `button_response`, `group_invite` | Business replies, group invite links |
+| `unknown(N)` | Rare types with no identified user content |
+
+Reactions are not separate messages. WhatsApp stores them on the message being reacted to, so
+they appear as `reactions: [{emoji, from_me, sender_jid, timestamp}]` on that message (the key
+is omitted when there are none).
+
 ## Configuration
 
 Works out of the box with defaults. Optionally configure via `~/.config/whatsapp-mcp/config.toml`:

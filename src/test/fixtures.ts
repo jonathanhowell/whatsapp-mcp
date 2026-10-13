@@ -37,9 +37,38 @@ export function makeFakeChatStorage(dir: string, setup?: (db: Database.Database)
       ZMEDIAITEM INTEGER, ZPARENTMESSAGE INTEGER, ZMESSAGETYPE INTEGER, ZGROUPEVENTTYPE INTEGER,
       ZISFROMME INTEGER, ZMESSAGESTATUS INTEGER, ZFLAGS INTEGER, ZSTARRED INTEGER,
       ZMESSAGEDATE REAL, ZSENTDATE REAL, ZTEXT TEXT, ZFROMJID TEXT, ZTOJID TEXT,
-      ZPUSHNAME TEXT, ZSTANZAID TEXT);
+      ZPUSHNAME TEXT, ZSTANZAID TEXT, ZMESSAGEINFO INTEGER, ZSORT INTEGER);
+    CREATE TABLE ZWAMESSAGEINFO (Z_PK INTEGER PRIMARY KEY, ZMESSAGE INTEGER, ZRECEIPTINFO BLOB);
   `);
   setup?.(db);
   db.close();
   return p;
+}
+
+/** Tiny protobuf encoder for building ZMETADATA / ZRECEIPTINFO fixtures. */
+export type PbValue = number | string | Buffer | PbField[];
+export type PbField = [number, PbValue];
+
+function varint(n: number): number[] {
+  const out: number[] = [];
+  do {
+    let byte = n % 128;
+    n = Math.floor(n / 128);
+    if (n > 0) byte |= 0x80;
+    out.push(byte);
+  } while (n > 0);
+  return out;
+}
+
+export function pb(fields: PbField[]): Buffer {
+  const parts: Buffer[] = [];
+  for (const [f, v] of fields) {
+    if (typeof v === "number") {
+      parts.push(Buffer.from([...varint(f * 8), ...varint(v)]));
+    } else {
+      const bytes = typeof v === "string" ? Buffer.from(v, "utf8") : Buffer.isBuffer(v) ? v : pb(v);
+      parts.push(Buffer.from([...varint(f * 8 + 2), ...varint(bytes.length)]), bytes);
+    }
+  }
+  return Buffer.concat(parts);
 }

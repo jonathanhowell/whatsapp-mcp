@@ -28,7 +28,7 @@ export function registerGetMessagesTool(
     "get_messages",
     {
       description:
-        "Get messages from a specific WhatsApp chat. Returns messages with sender, timestamp, text, type, and media metadata. Supports date range filtering and pagination.",
+        "Get messages from a specific WhatsApp chat. Returns messages with sender, timestamp, text (including image/document captions), type, and media metadata, plus type-specific details (call, poll, link, contact, location) and reactions. Supports date range filtering and pagination.",
       inputSchema: {
         chat_id: z.number().int().describe("The chat ID from list_chats"),
         limit: z.number().int().min(1).max(1000).default(50).optional()
