@@ -65,6 +65,7 @@ carry `2`.
 |-------|---------|
 | 5 | Quoted message's `ZSTANZAID` (**replies**) |
 | 6 | Quoted message's sender JID |
+| 7 | Quoted message's chat JID, only when it is in another chat ("reply privately" to a group message: 40 of 3,258 replies, all in 1:1 chats, all pointing at a group) |
 | 19.1 | Snapshot of the quoted text |
 | 24.1 | Template message: 2 header, 6 body, 7 footer |
 | 43.1 | Interactive message: 2 body, 5.2[].1 option labels |
@@ -82,7 +83,13 @@ Call outcome (87.1.2), compared against `CallHistory.sqlite`:
 
 **`ZPARENTMESSAGE` is not the reply link.** It is set on only a handful of rows, mostly group
 events pointing at another message (their exact meaning is unconfirmed). Join replies via field 5 →
-`ZWAMESSAGE.ZSTANZAID` (indexed), within the same `ZCHATSESSION`.
+`ZWAMESSAGE.ZSTANZAID` (indexed), within the same `ZCHATSESSION`, or within the chat whose
+`ZCONTACTJID` is field 7 when that is set.
+
+**`ZSTANZAID` is unique per chat, not globally.** Call events (type 59) reuse the call ID in each
+chat the call touched. In the audited DB every row had a non-empty stanza ID; 3 IDs appeared in
+two chats, and 1 appeared twice in one chat (a duplicated row with identical date, sender and
+text). The stable message key is `ZCONTACTJID` + `ZSTANZAID`.
 
 ## `ZWAMESSAGEINFO.ZRECEIPTINFO` (protobuf, joined via `ZWAMESSAGE.ZMESSAGEINFO`)
 

@@ -19,10 +19,13 @@ export function toolHarness(dbPath: string, config: Partial<Config> = {}) {
     server,
     getState,
     config: fullConfig,
-    async call(name: string, args: object = {}) {
+    async raw(name: string, args: object = {}) {
       const h = handlers.get(name);
       if (!h) throw new Error(`tool ${name} not registered`);
-      const res = await h(args);
+      return h(args);
+    },
+    async call(name: string, args: object = {}) {
+      const res = await this.raw(name, args);
       return JSON.parse(res.content[0].text);
     },
     close: () => db.close(),

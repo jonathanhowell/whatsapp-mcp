@@ -9,6 +9,12 @@ import type { NameResolver } from "./names.js";
  * gm = ZWAGROUPMEMBER (LEFT JOIN), inf = ZWAMESSAGEINFO (LEFT JOIN),
  * mcs = the message's ZWACHATSESSION.
  *
+ * Stable keys: Z_PK (message_id / chat_id) is a Core Data row number that
+ * WhatsApp re-assigns. ZSTANZAID is WhatsApp's own message ID and
+ * ZCONTACTJID the chat's JID. ZSTANZAID is unique only per chat (call
+ * events reuse the call ID across chats), so the stable message key is
+ * chat JID + stanza ID. See README "Stable keys".
+ *
  * Sender: in groups the member JID (ZWAGROUPMEMBER.ZMEMBERJID); in 1:1 chats
  * the chat partner (ZFROMJID is the group JID in groups, so it is only used
  * for 1:1). ZWAMESSAGE.ZPUSHNAME is deliberately NOT used: it is a base64
@@ -16,7 +22,9 @@ import type { NameResolver } from "./names.js";
  */
 export const MESSAGE_COLUMNS = `
     m.Z_PK            AS message_id,
+    m.ZSTANZAID       AS stanza_id,
     m.ZCHATSESSION    AS chat_session_id,
+    mcs.ZCONTACTJID   AS chat_jid,
     m.ZTEXT           AS text,
     m.ZMESSAGEDATE    AS message_date,
     m.ZMESSAGETYPE    AS message_type,
@@ -49,7 +57,9 @@ export const MESSAGE_JOINS = `
 
 export interface MessageRow {
   message_id: number;
+  stanza_id: string | null;
   chat_session_id: number;
+  chat_jid: string | null;
   text: string | null;
   message_date: number | null;
   message_type: number;
@@ -117,6 +127,8 @@ export interface PollInfo {
 
 export interface FormattedMessage {
   message_id: number;
+  /** WhatsApp's message ID (ZSTANZAID); stable, unique within a chat. */
+  stanza_id: string | null;
   timestamp: string | null;
   type: string;
   is_from_me: boolean;
@@ -140,6 +152,10 @@ export interface FormattedMessage {
 export interface QuotedMessage {
   /** null when the quoted message is not in the database (deleted / never synced). */
   message_id: number | null;
+  /** Always known, even when the original is gone. */
+  stanza_id: string;
+  /** Chat holding the quoted message; another chat for a private reply to a group message. */
+  chat_jid: string | null;
   text: string | null;
   is_from_me: boolean | null;
   sender_name: string | null;
@@ -278,6 +294,7 @@ export function formatMessage(row: MessageRow, names?: NameResolver): FormattedM
   let { text, media } = textAndMedia(row);
   const out: FormattedMessage = {
     message_id: row.message_id,
+    stanza_id: row.stanza_id ?? null,
     timestamp: appleEpochToISO(row.message_date),
     type: resolveMessageType(row.message_type),
     is_from_me: row.is_from_me === 1,
@@ -339,24 +356,29 @@ export function formatMessage(row: MessageRow, names?: NameResolver): FormattedM
 }
 
 // Replies: ZWAMEDIAITEM.ZMETADATA field 5 = quoted message's ZSTANZAID,
-// 6 = quoted sender JID, 19.1 = snapshot of the quoted text. (ZPARENTMESSAGE
+// 6 = quoted sender JID, 7 = the quoted message's chat JID when it is in
+// another chat, 19.1 = snapshot of the quoted text. Field 7 was set on 40 of
+// 3,258 replies in the audited DB, all in 1:1 chats and all pointing at a
+// group ("reply privately"); 32 of those originals were found in that group
+// and none in the replying chat. (ZPARENTMESSAGE
 // is NOT the reply link: in the audited DB it is set on only 7 rows, mostly
 // group events pointing at e.g. a pinned message.)
 export function decodeQuote(metadata: Buffer | null | undefined) {
   const meta = ProtoMessage.decode(metadata);
   const stanzaId = meta.str(5);
   if (!stanzaId) return null;
-  return { stanzaId, senderJid: meta.str(6), text: meta.path(19).str(1) };
+  return { stanzaId, chatJid: meta.str(7), senderJid: meta.str(6), text: meta.path(19).str(1) };
 }
 
 const QUOTED_SQL = (n: number) => `
-  SELECT${MESSAGE_COLUMNS}, m.ZSTANZAID AS stanza_id
+  SELECT${MESSAGE_COLUMNS}
   FROM ZWAMESSAGE m${MESSAGE_JOINS}
   WHERE m.ZSTANZAID IN (${Array(n).fill("?").join(", ")})`;
 
 /**
  * Format rows and attach `quoted` context. Quoted messages are looked up in
- * one batched query by stanza ID (indexed), matched within the same chat.
+ * one batched query by stanza ID (indexed), matched within the same chat, or
+ * within the chat named by ZMETADATA field 7 for private replies.
  */
 export function formatMessages(
   db: Database.Database,
@@ -366,20 +388,26 @@ export function formatMessages(
   const out = rows.map((r) => formatMessage(r, names));
   const quotes = rows.map((r) => decodeQuote(r.metadata));
   const ids = [...new Set(quotes.flatMap((q) => (q ? [q.stanzaId] : [])))];
-  const targets = new Map<string, MessageRow & { stanza_id: string }>();
+  const targets = new Map<string, MessageRow>();
   for (let i = 0; i < ids.length; i += 500) {
     const chunk = ids.slice(i, i + 500);
-    for (const t of db.prepare(QUOTED_SQL(chunk.length)).all(...chunk) as Array<MessageRow & { stanza_id: string }>) {
-      targets.set(`${t.chat_session_id}:${t.stanza_id}`, t);
+    for (const t of db.prepare(QUOTED_SQL(chunk.length)).all(...chunk) as MessageRow[]) {
+      targets.set(`id:${t.chat_session_id}:${t.stanza_id}`, t);
+      if (t.chat_jid) targets.set(`jid:${t.chat_jid}:${t.stanza_id}`, t);
     }
   }
   quotes.forEach((q, i) => {
     if (!q) return;
-    const target = targets.get(`${rows[i].chat_session_id}:${q.stanzaId}`);
+    const target = q.chatJid
+      ? targets.get(`jid:${q.chatJid}:${q.stanzaId}`)
+      : targets.get(`id:${rows[i].chat_session_id}:${q.stanzaId}`);
+    const chatJid = q.chatJid ?? rows[i].chat_jid ?? null;
     if (target) {
       const f = formatMessage(target, names);
       out[i].quoted = {
         message_id: f.message_id,
+        stanza_id: q.stanzaId,
+        chat_jid: chatJid,
         text: f.text ?? q.text,
         is_from_me: f.is_from_me,
         sender_name: f.sender_name,
@@ -388,6 +416,8 @@ export function formatMessages(
     } else {
       out[i].quoted = {
         message_id: null,
+        stanza_id: q.stanzaId,
+        chat_jid: chatJid,
         text: q.text,
         is_from_me: null,
         sender_name: names?.resolve(q.senderJid) ?? null,

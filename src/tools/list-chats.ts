@@ -47,7 +47,7 @@ export function registerListChatsTool(
     "list_chats",
     {
       description:
-        "List all WhatsApp chats ordered by most recent message first. Returns chat ID, name, type (individual/group/broadcast), unread count, and last message preview.",
+        "List all WhatsApp chats ordered by most recent message first. Returns chat ID, JID (jid / chat_jid: the stable key; chat_id is an internal row number that can change), name, type (individual/group/broadcast), unread count, and last message preview.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
@@ -79,6 +79,7 @@ export function registerListChatsTool(
             row.jid ??
             "Unknown",
           jid: row.jid,
+          chat_jid: row.jid,
           type: resolveChatType(row.session_type),
           unread_count: row.unread_count ?? 0,
           last_message_at: appleEpochToISO(row.last_message_date),

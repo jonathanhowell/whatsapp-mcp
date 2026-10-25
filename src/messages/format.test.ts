@@ -236,6 +236,8 @@ describe("quoted replies", () => {
     const m = Object.fromEntries((await h.call("get_messages", { chat_id: 712 })).messages.map((x: any) => [x.message_id, x]));
     assert.deepEqual(m[3].quoted, {
       message_id: 872,
+      stanza_id: "3AAAAAAAAAAAAAAAAAAA",
+      chat_jid: "9@s.whatsapp.net",
       text: "It's us. We will swap it shortly.",
       is_from_me: false,
       sender_name: "Garden",
@@ -251,6 +253,8 @@ describe("quoted replies", () => {
     const m = Object.fromEntries((await h.call("get_messages", { chat_id: 712 })).messages.map((x: any) => [x.message_id, x]));
     assert.deepEqual(m[5].quoted, {
       message_id: null,
+      stanza_id: "GONE",
+      chat_jid: "9@s.whatsapp.net",
       text: "a deleted message",
       is_from_me: null,
       sender_name: null,

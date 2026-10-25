@@ -4,6 +4,7 @@ import { appleEpochToISO } from "../utils/time.js";
 import type { DatabaseHandle } from "../db/connection.js";
 import type { Config } from "../config/loader.js";
 import { getNameResolver } from "../messages/names.js";
+import { resolveChatRef } from "../db/chat-ref.js";
 
 interface ChatRow {
   chat_id: number;
@@ -70,26 +71,29 @@ export function registerGetChatTool(
     "get_chat",
     {
       description:
-        "Get detailed information about a WhatsApp chat. For group chats, includes group members with JID and display name (resolved from your address book, push names and WhatsApp's @lid mapping; null if unknown).",
+        "Get detailed information about a WhatsApp chat. For group chats, includes group members with JID and display name (resolved from your address book, push names and WhatsApp's @lid mapping; null if unknown). Identify the chat by chat_id or by its stable chat_jid (exactly one).",
       inputSchema: {
-        chat_id: z.number().int().describe("The chat ID from list_chats"),
+        chat_id: z.number().int().optional()
+          .describe("The chat ID from list_chats (internal row number; may change). Give this or chat_jid"),
+        chat_jid: z.string().min(1).optional()
+          .describe("The chat's JID (stable), e.g. from list_chats. Give this or chat_id"),
       },
       annotations: { readOnlyHint: true },
     },
     async (args) => {
       const { config, handle } = await getState();
       try {
-
+        const { chat_id } = resolveChatRef(handle.db, args);
         const chatRow = handle.db
           .prepare(GET_CHAT_SQL)
-          .get(args.chat_id) as ChatRow | undefined;
+          .get(chat_id) as ChatRow | undefined;
 
         if (!chatRow) {
           return {
             content: [
               {
                 type: "text",
-                text: `Chat not found for ID: ${args.chat_id}`,
+                text: `Chat not found for ID: ${chat_id}`,
               },
             ],
             isError: true,
@@ -103,7 +107,7 @@ export function registerGetChatTool(
           const names = getNameResolver(handle, config.dbPath);
           const members = handle.db
             .prepare(GET_GROUP_MEMBERS_SQL)
-            .all(args.chat_id) as MemberRow[];
+            .all(chat_id) as MemberRow[];
 
           groupInfo = {
             owner_jid: chatRow.owner_jid,
@@ -121,6 +125,7 @@ export function registerGetChatTool(
         const result = {
           chat_id: chatRow.chat_id,
           jid: chatRow.jid,
+          chat_jid: chatRow.jid,
           name:
             chatRow.push_name ??
             chatRow.partner_name ??

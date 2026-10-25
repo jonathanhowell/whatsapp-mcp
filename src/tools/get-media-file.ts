@@ -62,6 +62,18 @@ const GET_MEDIA_FILE_SQL = `
   WHERE m.Z_PK = ?
 `;
 
+// ZSTANZAID is unique only per chat, so a stable lookup needs the chat JID too.
+// The one in-chat duplicate pair in the audited DB was the same message
+// stored twice, so take the lowest row.
+const MESSAGE_ID_BY_STANZA_SQL = `
+  SELECT m.Z_PK AS message_id
+  FROM ZWAMESSAGE m
+  JOIN ZWACHATSESSION cs ON cs.Z_PK = m.ZCHATSESSION
+  WHERE m.ZSTANZAID = ? AND cs.ZCONTACTJID = ?
+  ORDER BY m.Z_PK
+  LIMIT 1
+`;
+
 const LIVE_PATH_SQL = `
   SELECT mi.ZMEDIALOCALPATH AS media_path
   FROM ZWAMESSAGE m JOIN ZWAMEDIAITEM mi ON mi.Z_PK = m.ZMEDIAITEM
@@ -178,12 +190,23 @@ export function registerGetMediaFileTool(
     "get_media_file",
     {
       description:
-        "Retrieve a media file from a WhatsApp message — images (e.g. photographed letters), PDFs and other documents, voice notes, videos, GIFs and stickers are all retrievable. By default the file is copied to a local temp path and the response is {status, path, mime_type, byte_size, filename}; read the file at `path` (images and PDFs can be viewed directly). Pass inline: true to get base64 content instead (files up to 5 MB). Every response has a `status`: \"ok\" (file returned), \"no_media\" (the message has no attachment), \"not_downloaded\" (WhatsApp hasn't downloaded it to this Mac yet — open the chat in WhatsApp Desktop, then retry), or \"missing\" (it was downloaded but the file is gone).",
+        "Retrieve a media file from a WhatsApp message — images (e.g. photographed letters), PDFs and other documents, voice notes, videos, GIFs and stickers are all retrievable. By default the file is copied to a local temp path and the response is {status, path, mime_type, byte_size, filename}; read the file at `path` (images and PDFs can be viewed directly). Pass inline: true to get base64 content instead (files up to 5 MB). Every response has a `status`: \"ok\" (file returned), \"no_media\" (the message has no attachment), \"not_downloaded\" (WhatsApp hasn't downloaded it to this Mac yet — open the chat in WhatsApp Desktop, then retry), or \"missing\" (it was downloaded but the file is gone). Identify the message by message_id, or by its stable stanza_id + chat_jid (from get_messages).",
       inputSchema: {
         message_id: z
           .number()
           .int()
-          .describe("The message ID from get_messages or search_messages"),
+          .optional()
+          .describe("The message ID from get_messages or search_messages (internal row number; may change). Give this or stanza_id + chat_jid"),
+        stanza_id: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("The message's stanza_id (stable). Requires chat_jid"),
+        chat_jid: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("JID of the chat holding the message. Requires stanza_id"),
         inline: z
           .boolean()
           .optional()
@@ -196,9 +219,18 @@ export function registerGetMediaFileTool(
     async (args) => {
       const { config, handle } = await getState();
       try {
-        const row = handle.db
-          .prepare(GET_MEDIA_FILE_SQL)
-          .get(args.message_id) as MediaRow | undefined;
+        const byStanza = args.stanza_id !== undefined || args.chat_jid !== undefined;
+        if (byStanza === (args.message_id !== undefined) || (byStanza && !(args.stanza_id && args.chat_jid))) {
+          throw new Error("Provide either message_id, or both stanza_id and chat_jid");
+        }
+        const messageId = byStanza
+          ? (handle.db.prepare(MESSAGE_ID_BY_STANZA_SQL).get(args.stanza_id, args.chat_jid) as
+              | { message_id: number }
+              | undefined)?.message_id
+          : args.message_id;
+        const row = messageId === undefined
+          ? undefined
+          : (handle.db.prepare(GET_MEDIA_FILE_SQL).get(messageId) as MediaRow | undefined);
 
         if (!row) {
           return {
@@ -206,7 +238,9 @@ export function registerGetMediaFileTool(
               {
                 type: "text",
                 text: JSON.stringify(
-                  { message_id: args.message_id, status: "not_found", note: "No message with this ID" },
+                  byStanza
+                    ? { stanza_id: args.stanza_id, chat_jid: args.chat_jid, status: "not_found", note: "No message with this stanza ID in this chat" }
+                    : { message_id: args.message_id, status: "not_found", note: "No message with this ID" },
                   null,
                   2
                 ),

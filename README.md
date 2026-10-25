@@ -66,13 +66,41 @@ Or for Claude Code, add to `.mcp.json` in your project:
 | Tool | Description |
 |------|-------------|
 | `list_chats` | List all chats with metadata |
-| `get_messages` | Get messages from a specific chat, with date filtering and pagination |
+| `get_messages` | Get messages from a specific chat (by `chat_id` or `chat_jid`), with date filtering and pagination |
 | `get_messages_since` | Poll for new messages across all chats since a timestamp |
 | `search_messages` | Search message text and captions by keyword |
-| `get_chat` | Get chat details, including group members with resolved names |
+| `get_chat` | Get chat details (by `chat_id` or `chat_jid`), including group members with resolved names |
 | `get_contact` | Look up a contact by name or phone number |
-| `get_media_file` | Retrieve an image, PDF/document, voice note or video. Copies it to `$TMPDIR/whatsapp-mcp/media/` and returns `{path, mime_type, byte_size}` (or base64 with `inline: true`, ≤ 5 MB). Reports `status`: `ok` / `no_media` / `not_downloaded` / `missing` |
+| `get_media_file` | Retrieve an image, PDF/document, voice note or video. Copies it to `$TMPDIR/whatsapp-mcp/media/` and returns `{path, mime_type, byte_size}` (or base64 with `inline: true`, ≤ 5 MB). Reports `status`: `ok` / `no_media` / `not_downloaded` / `missing`. Takes `message_id`, or `stanza_id` + `chat_jid` |
 | `refresh_snapshot` | Re-snapshot the database for fresh data; keeps the previous snapshot if it fails |
+
+## Stable keys
+
+`message_id` and `chat_id` are Core Data row numbers (`Z_PK`). WhatsApp re-assigns them, so the
+same number can later point at a different message or chat. Do not store them. Store these
+instead:
+
+| Entity | Stable key | Where it appears |
+|--------|-----------|------------------|
+| Chat | `chat_jid` (`ZWACHATSESSION.ZCONTACTJID`) | `list_chats`, `get_chat` (also as `jid`), top level of `get_messages`, every chat group of `get_messages_since` / `search_messages`, `quoted.chat_jid` |
+| Message | `chat_jid` + `stanza_id` (`ZWAMESSAGE.ZSTANZAID`) | Every message, and `quoted.stanza_id` |
+
+`stanza_id` is **unique only within a chat**, not globally: WhatsApp logs a call event in each
+chat it touches with the call ID as its stanza ID, so the same `stanza_id` can appear in two
+chats. Always key messages on the pair.
+
+`get_messages` and `get_chat` accept `chat_jid` instead of `chat_id`, and `get_media_file`
+accepts `stanza_id` + `chat_jid` instead of `message_id`, so a caller that stores only stable
+keys never needs the row numbers.
+
+Checked against a real database (30,005 messages, 727 chats):
+
+- Every message has a non-empty `stanza_id`, including system rows, group events, calls
+  and deleted messages. No message type lacks one.
+- Every chat has a non-empty, unique `chat_jid`.
+- `stanza_id` alone collided across chats 3 times (2 of them call events in two 1:1 chats).
+- `chat_jid` + `stanza_id` collided once: the same group message stored twice (identical date,
+  sender and text). Treat the pair as identifying one logical message.
 
 ## Message format
 
@@ -81,6 +109,7 @@ Or for Claude Code, add to `.mcp.json` in your project:
 ```json
 {
   "message_id": 1234,
+  "stanza_id": "3EB0C0FFEE0000000000",
   "timestamp": "2026-01-01T12:00:00.000Z",
   "type": "image",
   "is_from_me": false,
@@ -119,7 +148,9 @@ Or for Claude Code, add to `.mcp.json` in your project:
 | `list_response`, `button_response`, `group_invite` | Business replies, group invite links |
 | `unknown(N)` | Rare types with no identified user content |
 
-`quoted` is set on replies: `{message_id, text, is_from_me, sender_name, sender_jid}`. If the
+`quoted` is set on replies: `{message_id, stanza_id, chat_jid, text, is_from_me, sender_name,
+sender_jid}`. `stanza_id` and `chat_jid` identify the original and are always set. `chat_jid` is
+usually the reply's own chat; for a private reply to a group message it is the group. If the
 original message is no longer in the database, `message_id` is `null` and `text` is WhatsApp's
 stored snapshot of the quoted text.
 

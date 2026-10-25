@@ -14,14 +14,12 @@ import type { Config } from "../config/loader.js";
 
 interface SearchRow extends MessageRow {
   chat_name: string | null;
-  chat_jid: string | null;
   chat_push_name: string | null;
 }
 
 const SEARCH_MESSAGES_SQL = `
   SELECT${MESSAGE_COLUMNS},
     cs.ZPARTNERNAME   AS chat_name,
-    cs.ZCONTACTJID    AS chat_jid,
     ppn.ZPUSHNAME     AS chat_push_name
   FROM ZWAMESSAGE m
   JOIN ZWACHATSESSION cs ON cs.Z_PK = m.ZCHATSESSION
@@ -34,7 +32,6 @@ const SEARCH_MESSAGES_SQL = `
 const SEARCH_MESSAGES_WITH_CURSOR_SQL = `
   SELECT${MESSAGE_COLUMNS},
     cs.ZPARTNERNAME   AS chat_name,
-    cs.ZCONTACTJID    AS chat_jid,
     ppn.ZPUSHNAME     AS chat_push_name
   FROM ZWAMESSAGE m
   JOIN ZWACHATSESSION cs ON cs.Z_PK = m.ZCHATSESSION
@@ -53,7 +50,7 @@ export function registerSearchMessagesTool(
     "search_messages",
     {
       description:
-        "Search WhatsApp messages across all chats by keyword. Matches message text and the captions of images, videos and documents. Returns matching messages grouped by chat. Case-insensitive.",
+        "Search WhatsApp messages across all chats by keyword. Matches message text and the captions of images, videos and documents. Returns matching messages grouped by chat (chat_id and its stable chat_jid); messages have the same shape as get_messages, including stanza_id. Case-insensitive.",
       inputSchema: {
         query: z.string().min(1).describe("Search keyword or phrase"),
         cursor: z
@@ -120,7 +117,7 @@ export function registerSearchMessagesTool(
 
         const chatMap = new Map<
           number,
-          { chat_id: number; chat_name: string; messages: object[] }
+          { chat_id: number; chat_jid: string | null; chat_name: string; messages: object[] }
         >();
 
         const formatted = formatMessages(handle.db, returned, names);
@@ -128,6 +125,7 @@ export function registerSearchMessagesTool(
           if (!chatMap.has(row.chat_session_id)) {
             chatMap.set(row.chat_session_id, {
               chat_id: row.chat_session_id,
+              chat_jid: row.chat_jid,
               chat_name:
                 row.chat_push_name ?? row.chat_name ?? row.chat_jid ?? "Unknown",
               messages: [],

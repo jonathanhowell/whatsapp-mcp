@@ -13,14 +13,12 @@ import type { Config } from "../config/loader.js";
 
 interface CrossChatRow extends MessageRow {
   chat_name: string | null;
-  chat_jid: string | null;
   chat_push_name: string | null;
 }
 
 const GET_MESSAGES_SINCE_SQL = `
   SELECT${MESSAGE_COLUMNS},
     cs.ZPARTNERNAME   AS chat_name,
-    cs.ZCONTACTJID    AS chat_jid,
     ppn.ZPUSHNAME     AS chat_push_name
   FROM ZWAMESSAGE m
   JOIN ZWACHATSESSION cs ON cs.Z_PK = m.ZCHATSESSION
@@ -38,7 +36,7 @@ export function registerGetMessagesSinceTool(
     "get_messages_since",
     {
       description:
-        "Get all messages across all WhatsApp chats since a given timestamp. Results grouped by chat. Use for polling new messages. Messages have the same shape as get_messages (captions in text; call, poll, link, contact, location details; reactions).",
+        "Get all messages across all WhatsApp chats since a given timestamp. Results grouped by chat. Use for polling new messages. Each chat group has chat_id and its stable chat_jid. Messages have the same shape as get_messages (stanza_id; captions in text; call, poll, link, contact, location details; reactions).",
       inputSchema: {
         since: z.string().describe(
           "ISO 8601 timestamp (required). Return all messages across all chats after this time."
@@ -88,7 +86,7 @@ export function registerGetMessagesSinceTool(
 
         const chatMap = new Map<
           number,
-          { chat_id: number; chat_name: string; messages: object[] }
+          { chat_id: number; chat_jid: string | null; chat_name: string; messages: object[] }
         >();
 
         const formatted = formatMessages(handle.db, returned, names);
@@ -96,6 +94,7 @@ export function registerGetMessagesSinceTool(
           if (!chatMap.has(row.chat_session_id)) {
             chatMap.set(row.chat_session_id, {
               chat_id: row.chat_session_id,
+              chat_jid: row.chat_jid,
               chat_name:
                 row.chat_push_name ?? row.chat_name ?? row.chat_jid ?? "Unknown",
               messages: [],
